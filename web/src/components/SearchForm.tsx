@@ -4,9 +4,22 @@ interface Props {
   years: number[]
   loading: boolean
   onSearch: (names: string[], years: number[]) => void
+  submitLabel?: string
+  placeholder?: string
+  /** Minimalna i maksymalna liczba zawodników (np. porównanie wymaga co najmniej dwóch). */
+  minNames?: number
+  maxNames?: number
 }
 
-export function SearchForm({ years, loading, onSearch }: Props) {
+export function SearchForm({
+  years,
+  loading,
+  onSearch,
+  submitLabel = 'Szukaj',
+  placeholder = 'Jan Nowak\nKowalska Anna',
+  minNames = 1,
+  maxNames = 20,
+}: Props) {
   const [namesText, setNamesText] = useState('')
   const [selected, setSelected] = useState<number[] | null>(null)
 
@@ -14,12 +27,14 @@ export function SearchForm({ years, loading, onSearch }: Props) {
   const selectedYears = selected ?? (years.length > 0 ? [years[0]] : [])
   const names = namesText.split('\n').map((n) => n.trim()).filter(Boolean)
 
+  const namesOk = names.length >= minNames && names.length <= maxNames
+
   const toggleYear = (year: number) =>
     setSelected(selectedYears.includes(year) ? selectedYears.filter((y) => y !== year) : [...selectedYears, year])
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (names.length > 0 && selectedYears.length > 0) onSearch(names, selectedYears)
+    if (namesOk && selectedYears.length > 0) onSearch(names, selectedYears)
   }
 
   return (
@@ -27,13 +42,16 @@ export function SearchForm({ years, loading, onSearch }: Props) {
       <label className="field">
         <span className="field-label">Zawodnicy</span>
         <textarea
-          rows={3}
+          rows={Math.min(8, Math.max(3, namesText.split('\n').length + 1))}
           value={namesText}
           onChange={(e) => setNamesText(e.target.value)}
-          placeholder={'Jan Nowak\nKowalska Anna'}
+          placeholder={placeholder}
           spellCheck={false}
         />
-        <span className="hint">Jeden zawodnik w linii. Kolejność imienia i nazwiska ani polskie znaki nie mają znaczenia.</span>
+        <span className="hint">
+          Jeden zawodnik w linii{minNames > 1 ? ` (od ${minNames} do ${maxNames})` : ''}. Kolejność imienia i nazwiska ani
+          polskie znaki nie mają znaczenia.
+        </span>
       </label>
 
       <fieldset className="field">
@@ -64,8 +82,8 @@ export function SearchForm({ years, loading, onSearch }: Props) {
       </fieldset>
 
       <div className="form-actions">
-        <button className="primary" type="submit" disabled={loading || names.length === 0 || selectedYears.length === 0}>
-          {loading ? 'Szukam…' : 'Szukaj'}
+        <button className="primary" type="submit" disabled={loading || !namesOk || selectedYears.length === 0}>
+          {loading ? 'Szukam…' : submitLabel}
         </button>
         {loading && (
           <span className="hint">
