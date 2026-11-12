@@ -1,10 +1,60 @@
 # SzukajkaStartow
 
-Aplikacja konsolowa (.NET 10), która przegląda komunikaty PDF z zawodów strzeleckich
+Przegląda komunikaty PDF z zawodów strzeleckich
 (np. https://agat.zlotoryja.pl/komunikaty/komunikaty-2026/) i wypisuje starty wskazanych zawodników:
-zawody, konkurencję, miejsce, klub i wynik.
+zawody, konkurencję, miejsce, klub i wynik. Uzupełnia też wniosek PZSS o przedłużenie licencji.
 
-## Uruchomienie
+Są dwie wersje, korzystające z tej samej logiki:
+
+- **konsolowa** — `src/SzukajkaStartow` (opis poniżej),
+- **webowa** — serwer ASP.NET Core `src/SzukajkaStartow.Web` + frontend React w `web/` (zobacz [Wersja webowa](#wersja-webowa)).
+
+## Wersja webowa
+
+W przeglądarce: wpisujesz zawodników, zaznaczasz lata, przeglądasz starty pogrupowane po zawodach,
+pobierasz CSV, a w panelu „Wniosek PZSS” widzisz werdykt, bilans startów i podgląd tabeli wniosku
+(z wyborem roku, zakresu licencji, dyscypliny wiodącej i układu „jeden X w wierszu”). Przycisk
+„Pobierz wniosek PDF” daje ten sam plik co wersja konsolowa.
+
+Przeglądarka nie może sama pobierać PDF-ów ze strony klubu (CORS), dlatego pobieraniem i czytaniem PDF-ów
+zajmuje się serwer, a React tylko z nim rozmawia.
+
+**Uruchomienie do pracy nad kodem** (dwa terminale):
+
+```bash
+# 1. serwer API na http://localhost:5150
+dotnet run --project src/SzukajkaStartow.Web --urls http://localhost:5150
+
+# 2. frontend z podglądem zmian na żywo: http://localhost:5173
+cd web
+npm install
+npm run dev
+```
+
+Vite przekierowuje zapytania `/api` do serwera z punktu 1.
+
+**Wersja do wdrożenia** — jedno polecenie buduje frontend i serwer razem:
+
+```bash
+dotnet publish src/SzukajkaStartow.Web -c Release -o publish
+cd publish && dotnet SzukajkaStartow.Web.dll --urls http://0.0.0.0:8080
+```
+
+Wymaga Node.js (do zbudowania frontendu) i .NET 10. Pobrane PDF-y serwer trzyma w tym samym cache co
+wersja konsolowa (zmiana: ustawienie `CacheDir` w `appsettings.json`).
+
+API (JSON):
+
+| Endpoint | Opis |
+|---|---|
+| `GET /api/years` | lata, dla których klub ma stronę z komunikatami |
+| `POST /api/search` | `{ "names": [...], "years": [2026] }` → starty |
+| `POST /api/license` | `{ "name", "year", "licensed": [], "leading": null, "oneXPerRow": false }` → plan wniosku i werdykt |
+| `POST /api/license/pdf` | to samo → uzupełniony wniosek PDF |
+
+## Wersja konsolowa
+
+### Uruchomienie
 
 ```bash
 cd src/SzukajkaStartow
@@ -49,13 +99,13 @@ ostrzega, jeśli pasuje kilka osób.
 | `--wzor`, `--czcionka` | inny plik wzoru (ten sam układ) / inna czcionka TTF |
 | `--zrzut <plik.pdf/URL>` | diagnostyka: jak program widzi wiersze i kolumny w PDF-ie |
 
-## Wniosek o przedłużenie licencji (PZSS)
+### Wniosek o przedłużenie licencji (PZSS)
 
 ```bash
 dotnet run -- "Jan Nowak" --wniosek wniosek.pdf --rok-wniosku 2025
 ```
 
-Program uzupełnia wzór wniosku PZSS ([Assets/](src/SzukajkaStartow/Assets/)) danymi, które zna z komunikatów:
+Program uzupełnia wzór wniosku PZSS ([Assets/](src/SzukajkaStartow.Core/Assets/)) danymi, które zna z komunikatów:
 
 - **Nazwisko i imię** (w zapisie z protokołów, wielkimi literami),
 - **rok** („w 20__ roku”),
@@ -105,13 +155,16 @@ dotnet publish src/SzukajkaStartow -c Release -r linux-x64 --self-contained -p:P
 
 ## Jak to działa
 
-1. **[WebScraper.cs](src/SzukajkaStartow/WebScraper.cs)** — czyta tabelę na stronie (data, nazwa zawodów, linki do PDF).
-2. **[PdfCache.cs](src/SzukajkaStartow/PdfCache.cs)** — pobiera PDF-y i trzyma je w cache.
-3. **[PdfLayout.cs](src/SzukajkaStartow/PdfLayout.cs)** — z pozycji słów w PDF-ie (biblioteka PdfPig) odtwarza wiersze i kolumny tabel.
-4. **[ResultExtractor.cs](src/SzukajkaStartow/ResultExtractor.cs)** — śledzi bieżącą konkurencję i nagłówek tabeli,
+Wspólna logika jest w bibliotece [src/SzukajkaStartow.Core](src/SzukajkaStartow.Core/),
+a [StartSearch.cs](src/SzukajkaStartow.Core/StartSearch.cs) spina całe wyszukiwanie.
+
+1. **[WebScraper.cs](src/SzukajkaStartow.Core/WebScraper.cs)** — czyta tabelę na stronie (data, nazwa zawodów, linki do PDF).
+2. **[PdfCache.cs](src/SzukajkaStartow.Core/PdfCache.cs)** — pobiera PDF-y i trzyma je w cache.
+3. **[PdfLayout.cs](src/SzukajkaStartow.Core/PdfLayout.cs)** — z pozycji słów w PDF-ie (biblioteka PdfPig) odtwarza wiersze i kolumny tabel.
+4. **[ResultExtractor.cs](src/SzukajkaStartow.Core/ResultExtractor.cs)** — śledzi bieżącą konkurencję i nagłówek tabeli,
    a wiersz z zawodnikiem rozkłada na miejsce / klub / wynik / szczegóły, dopasowując wartości do kolumn nagłówka.
-5. **[Report.cs](src/SzukajkaStartow/Report.cs)** — wydruk w konsoli i CSV.
-6. **[LicenseApplication.cs](src/SzukajkaStartow/LicenseApplication.cs)** — wiersze wniosku i nanoszenie tekstu na wzór PDF.
+5. **[Report.cs](src/SzukajkaStartow/Report.cs)** — wydruk w konsoli i CSV (wersja konsolowa).
+6. **[LicenseApplication.cs](src/SzukajkaStartow.Core/LicenseApplication.cs)** — wiersze wniosku i nanoszenie tekstu na wzór PDF.
 
 Obsługiwane formaty komunikatów (sprawdzone na latach 2018–2026):
 

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\SzukajkaStartow.Core\SzukajkaStartow.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <WebAppDir>$(MSBuildProjectDirectory)\..\..\web</WebAppDir>
+  </PropertyGroup>
+
+  <!-- `dotnet publish` sam buduje frontend React (web/) do wwwroot, więc paczka zawiera całą aplikację. -->
+  <Target Name="BuildWebApp" BeforeTargets="ComputeFilesToPublish">
+    <Exec Command="npm ci" WorkingDirectory="$(WebAppDir)" />
+    <Exec Command="npm run build" WorkingDirectory="$(WebAppDir)" />
+    <ItemGroup>
+      <BuiltWebFiles Include="wwwroot\**" />
+      <ResolvedFileToPublish Include="@(BuiltWebFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>%(BuiltWebFiles.Identity)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+</Project>

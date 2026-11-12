@@ -1,5 +1,7 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/SzukajkaStartow.Core/SzukajkaStartow.Core.csproj" />
+    <Project Path="src/SzukajkaStartow.Web/SzukajkaStartow.Web.csproj" />
     <Project Path="src/SzukajkaStartow/SzukajkaStartow.csproj" />
   </Folder>
 </Solution>

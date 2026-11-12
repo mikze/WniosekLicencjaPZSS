@@ -1,10 +1,7 @@
-﻿using System.Collections.Concurrent;
-using System.Text;
+﻿using System.Text;
 using SzukajkaStartow;
 
 Console.OutputEncoding = Encoding.UTF8;
-
-const string DefaultBase = "https://agat.zlotoryja.pl/komunikaty/komunikaty-{0}/";
 
 var names = new List<string>();
 var pages = new List<string>();
@@ -15,11 +12,9 @@ int? applicationYear = null;
 Discipline? leading = null;  // null = wybór automatyczny
 bool oneXPerRow = false;    // --jeden-x: w każdym wierszu tylko jedna dyscyplina
 Discipline? licensed = null; // null = sprawdź pełną licencję, a gdy się nie da — największy pasujący zakres
-string assetsDir = Path.Combine(AppContext.BaseDirectory, "Assets");
-string templatePath = Path.Combine(assetsDir, "wniosek-o-przedluzenie-licencji-zawodniczej.pdf");
-string fontPath = Path.Combine(assetsDir, "LiberationSans-Regular.ttf");
-string cacheDir = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SzukajkaStartow", "cache");
+string templatePath = LicenseApplication.DefaultTemplatePath;
+string fontPath = LicenseApplication.DefaultFontPath;
+string cacheDir = StartSearch.DefaultCacheDir;
 
 for (int i = 0; i < args.Length; i++)
 {
@@ -30,7 +25,7 @@ for (int i = 0; i < args.Length; i++)
             PrintHelp();
             return 0;
         case "-u" or "--url": pages.Add(Next()); break;
-        case "-r" or "--rok": pages.Add(string.Format(DefaultBase, Next())); break;
+        case "-r" or "--rok": pages.Add(StartSearch.YearPage(int.Parse(Next()))); break;
         case "-a" or "--wszystkie-lata": allYears = true; break;
         case "-l" or "--lista":
             names.AddRange(File.ReadAllLines(Next()).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#')));
@@ -72,13 +67,11 @@ if (names.Count == 0)
 }
 applicationYear ??= DateTime.Now.Year;
 if (pages.Count == 0)
-    pages.Add(string.Format(DefaultBase, applicationPath is null ? DateTime.Now.Year : applicationYear));
+    pages.Add(StartSearch.YearPage(applicationPath is null ? DateTime.Now.Year : applicationYear.Value));
 
-var matchers = names.Select(n => new NameMatcher(n)).ToList();
 using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
 http.DefaultRequestHeaders.UserAgent.ParseAdd("SzukajkaStartow/1.0");
-var scraper = new WebScraper(http);
-var cache = new PdfCache(http, cacheDir, refresh);
+var search = new StartSearch(http, cacheDir);
 using var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
@@ -86,57 +79,19 @@ if (allYears)
 {
     var expanded = new List<string>();
     foreach (var p in pages)
-        expanded.AddRange(await scraper.GetYearPagesAsync(p, cts.Token));
+        expanded.AddRange(await search.GetYearPagesAsync(p, cts.Token));
     pages = expanded.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 }
 
-var links = new List<PdfLink>();
-foreach (var page in pages)
-{
-    try
-    {
-        var found = await scraper.GetPdfLinksAsync(page, cts.Token);
-        Console.Error.WriteLine($"{page}: {found.Count} PDF");
-        links.AddRange(found);
-    }
-    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-    {
-        Console.Error.WriteLine($"Nie udało się pobrać strony {page}: {ex.Message}");
-    }
-}
-
-var all = new ConcurrentBag<StartResult>();
-var warnings = new ConcurrentBag<string>();
-int done = 0;
-await Parallel.ForEachAsync(links, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = cts.Token },
-    async (link, ct) =>
-    {
-        try
-        {
-            var bytes = await cache.GetAsync(link.Url, ct);
-            var lines = PdfLayout.ReadLines(bytes);
-            if (lines.Count == 0)
-                warnings.Add($"Brak tekstu (skan?): {link.Url}");
-            var (_, results) = ResultExtractor.Extract(lines, matchers, link);
-            foreach (var r in results) all.Add(r);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            warnings.Add($"Błąd {link.Url}: {ex.Message}");
-        }
-        var n = Interlocked.Increment(ref done);
-        Console.Error.Write($"\rPrzetworzono {n}/{links.Count} plików...");
-    });
+var outcome = await search.RunAsync(names, pages, refresh,
+    log: Console.Error.WriteLine,
+    progress: new Progress<(int Done, int Total)>(p => Console.Error.Write($"\rPrzetworzono {p.Done}/{p.Total} plików...")),
+    ct: cts.Token);
 Console.Error.WriteLine();
-foreach (var w in warnings.OrderBy(w => w)) Console.Error.WriteLine("UWAGA: " + w);
+foreach (var w in outcome.Warnings) Console.Error.WriteLine("UWAGA: " + w);
+var ordered = outcome.Results;
 
-var ordered = all
-    .OrderBy(r => names.IndexOf(r.Query))
-    .ThenBy(r => links.IndexOf(r.Source))
-    .ThenBy(r => r.LineIndex)
-    .ToList();
-
-Report.PrintConsole(ordered, matchers.Select(m => m.Query).ToList(), verbose);
+Report.PrintConsole(ordered, names, verbose);
 if (csvPath is not null)
 {
     Report.WriteCsv(ordered, csvPath);

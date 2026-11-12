@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,12 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.8.5" />
-    <PackageReference Include="PdfPig" Version="0.1.16" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Assets\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <ProjectReference Include="..\SzukajkaStartow.Core\SzukajkaStartow.Core.csproj" />
   </ItemGroup>
 
 </Project>

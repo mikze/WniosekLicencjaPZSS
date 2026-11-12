@@ -254,6 +254,16 @@ public static partial class LicenseApplication
     }
 
     public static void Fill(string templatePath, string fontPath, string outputPath,
+        string athleteName, int year, IReadOnlyList<LicenseRow> rows) =>
+        File.WriteAllBytes(outputPath, Render(templatePath, fontPath, athleteName, year, rows));
+
+    /// <summary>Domyślne pliki wzoru i czcionki (katalog Assets obok programu).</summary>
+    public static string DefaultTemplatePath =>
+        Path.Combine(AppContext.BaseDirectory, "Assets", "wniosek-o-przedluzenie-licencji-zawodniczej.pdf");
+    public static string DefaultFontPath => Path.Combine(AppContext.BaseDirectory, "Assets", "LiberationSans-Regular.ttf");
+
+    /// <summary>Uzupełniony wniosek jako bajty PDF-a.</summary>
+    public static byte[] Render(string templatePath, string fontPath,
         string athleteName, int year, IReadOnlyList<LicenseRow> rows)
     {
         var templateBytes = File.ReadAllBytes(templatePath);
@@ -287,7 +297,7 @@ public static partial class LicenseApplication
             }
         }
 
-        File.WriteAllBytes(outputPath, builder.Build());
+        return builder.Build();
     }
 
     private sealed record Layout(double NameBaseline, double YearX, double YearBaseline, double[] RowBaselines);

@@ -16,7 +16,7 @@ public sealed partial class PdfCache(HttpClient http, string directory, bool ref
             return await File.ReadAllBytesAsync(path, ct);
 
         var bytes = await http.GetByteArrayAsync(url, ct);
-        var tmp = path + ".tmp";
+        var tmp = $"{path}.{Guid.NewGuid():N}.tmp"; // kilka równoległych pobrań tego samego pliku się nie gryzie
         await File.WriteAllBytesAsync(tmp, bytes, ct);
         File.Move(tmp, path, overwrite: true);
         return bytes;

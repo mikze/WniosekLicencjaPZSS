@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Zbudowany frontend React (powstaje z web/ przez `npm run build`)
+src/SzukajkaStartow.Web/wwwroot/
