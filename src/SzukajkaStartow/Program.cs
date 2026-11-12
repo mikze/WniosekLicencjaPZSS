@@ -13,6 +13,7 @@ bool allYears = false, refresh = false, verbose = false;
 string? applicationPath = null;
 int? applicationYear = null;
 Discipline? leading = null;  // null = wybór automatyczny
+bool oneXPerRow = false;    // --jeden-x: w każdym wierszu tylko jedna dyscyplina
 Discipline? licensed = null; // null = sprawdź pełną licencję, a gdy się nie da — największy pasujący zakres
 string assetsDir = Path.Combine(AppContext.BaseDirectory, "Assets");
 string templatePath = Path.Combine(assetsDir, "wniosek-o-przedluzenie-licencji-zawodniczej.pdf");
@@ -41,6 +42,7 @@ for (int i = 0; i < args.Length; i++)
         case "-w" or "--wniosek": applicationPath = Next(); break;
         case "--rok-wniosku": applicationYear = int.Parse(Next()); break;
         case "--wiodaca": leading = ParseDiscipline(Next()); break;
+        case "--jeden-x": oneXPerRow = true; break;
         case "--licencja":
             licensed = Next().Split([',', '+', ' '], StringSplitOptions.RemoveEmptyEntries)
                 .Aggregate(Discipline.None, (acc, x) => acc | ParseDiscipline(x));
@@ -147,6 +149,8 @@ if (applicationPath is not null)
     {
         var mine = ordered.Where(r => r.Query == query).ToList();
         var plan = LicenseApplication.BuildRows(mine, applicationYear.Value, leading, licensed);
+        if (oneXPerRow)
+            plan = LicenseApplication.OneDisciplinePerRow(plan);
         var rows = plan.Rows;
         var athlete = LicenseApplication.AthleteName(mine, query);
         // Przy kilku zawodnikach każdy dostaje osobny plik: wniosek-NOWAK_JAN.pdf
@@ -246,6 +250,8 @@ static void PrintHelp() => Console.WriteLine("""
       -w, --wniosek <plik.pdf> uzupełnij wniosek: nazwisko i imię, rok i tabela startów
                                (przy kilku zawodnikach powstaje osobny plik dla każdego)
           --rok-wniosku <RRRR> rok, z którego brać starty (domyślnie bieżący)
+          --jeden-x            w każdym wierszu tylko jeden X: wiersze pogrupowane według dyscypliny
+                               (najpierw wiodąca, potem pozostałe)
           --licencja <lista>   dyscypliny objęte licencją, np. karabin albo pistolet,karabin
                                (domyślnie: wszystkie; gdy warunki nie są spełnione, program sam
                                sprawdzi, dla jakiego zakresu licencji zawodnik je spełnia)

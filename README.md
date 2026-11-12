@@ -43,6 +43,7 @@ ostrzega, jeśli pasuje kilka osób.
 | `-v, --szczegoly` | pokaż szczegóły i surowy wiersz z PDF-a |
 | `-w, --wniosek <plik.pdf>` | uzupełnij wniosek o przedłużenie licencji (patrz niżej) |
 | `--rok-wniosku <RRRR>` | z którego roku brać starty do wniosku (domyślnie bieżący) |
+| `--jeden-x` | we wniosku jeden X w wierszu, wiersze pogrupowane według dyscypliny |
 | `--licencja <lista>` | dyscypliny objęte licencją, np. `karabin` lub `pistolet,karabin` (domyślnie wykrywane) |
 | `--wiodaca <dyscyplina>` | wymuś dyscyplinę wiodącą: pistolet / karabin / strzelba (domyślnie wybór automatyczny) |
 | `--wzor`, `--czcionka` | inny plik wzoru (ten sam układ) / inna czcionka TTF |
@@ -71,6 +72,10 @@ a przy licencji na samą broń jednego rodzaju po prostu 4 starty w tej dyscypli
   i pokazuje, czego brakuje do pełnej licencji.
 - Gdy jeden wiersz na zawody nie wystarcza, konkurencje z tych samych zawodów są rozpisywane na osobne wiersze.
   Na przykład Psp i Pcz na „Wiosnie 2026” to 2 starty pistoletowe.
+
+Z opcją `--jeden-x` każdy wiersz ma tylko jeden X. Wiersze są pogrupowane według dyscypliny:
+najpierw wiodąca, potem pozostałe. Na przykład 4 wiersze pistoletowe, potem 2 karabinowe i 2 ze strzelby.
+Bilans startów jest taki sam jak w zwykłym układzie.
 
 Przykładowy bilans i werdykt:
 

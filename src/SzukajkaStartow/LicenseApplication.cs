@@ -9,7 +9,8 @@ namespace SzukajkaStartow;
 public enum Discipline { None = 0, Pistol = 1, Rifle = 2, Shotgun = 4, All = Pistol | Rifle | Shotgun }
 
 /// <summary>Jeden wiersz tabeli startów we wniosku. Note (np. "Pcz 10 strz.") jest tylko do podglądu w konsoli.</summary>
-public sealed record LicenseRow(string Name, string Date, string? Place, Discipline Disciplines, string? Note)
+public sealed record LicenseRow(string Name, string Date, string? Place, Discipline Disciplines, string? Note,
+    Discipline NoteFor = Discipline.None)
 {
     public bool Pistol => Disciplines.HasFlag(Discipline.Pistol);
     public bool Rifle => Disciplines.HasFlag(Discipline.Rifle);
@@ -161,7 +162,7 @@ public static partial class LicenseApplication
         var order = required.Keys.OrderBy(d => d == leading ? 0 : 1).ToList();
         while (SplitOnce(rows, order, required)) { }
 
-        var plan = rows.Select(r => new LicenseRow(r.Name, r.Date, r.Place, r.Disciplines, Note(r))).ToList();
+        var plan = rows.Select(r => new LicenseRow(r.Name, r.Date, r.Place, r.Disciplines, Note(r), r.SplitFor)).ToList();
         return new LicensePlan(plan, leading, licensed, CountRows(rows), required);
     }
 
@@ -226,6 +227,20 @@ public static partial class LicenseApplication
         (@"przyrz[ąa]dy\s+mechaniczne", "mech."),
         (@"strza[łl](ów|y)", "strz."),
     ];
+
+    /// <summary>
+    /// Układ "jeden X w wierszu": każdy wiersz rozpisany na osobne wiersze dla każdej dyscypliny, pogrupowane
+    /// według dyscypliny (najpierw wiodąca, potem pozostałe). Liczba startów w dyscyplinach się nie zmienia.
+    /// </summary>
+    public static LicensePlan OneDisciplinePerRow(LicensePlan plan)
+    {
+        var order = AllDisciplines.OrderBy(d => d == plan.Leading ? 0 : 1);
+        var rows = order
+            .SelectMany(d => plan.Rows.Where(r => r.Disciplines.HasFlag(d))
+                .Select(r => r with { Disciplines = d, Note = r.NoteFor.HasFlag(d) ? r.Note : null, NoteFor = d }))
+            .ToList();
+        return plan with { Rows = rows };
+    }
 
     /// <summary>Nazwisko i imię w formie do wniosku, np. "NOWAK JAN" (najczęstszy zapis w protokołach).</summary>
     public static string AthleteName(IEnumerable<StartResult> results, string fallback)
@@ -323,7 +338,7 @@ public static partial class LicenseApplication
     private static double Width(PdfPageBuilder page, PdfDocumentBuilder.AddedFont font, string text, double size)
     {
         var letters = page.MeasureText(text, size, new PdfPoint(0, 0), font);
-        return letters.Count == 0 ? 0 : letters.Max(l => l.GlyphRectangle.Right) - letters.Min(l => l.GlyphRectangle.Left);
+        return letters.Count == 0 ? 0 : letters.Max(l => l.BoundingBox.Right) - letters.Min(l => l.BoundingBox.Left);
     }
 
     private static Discipline Disciplines(StartResult r)
