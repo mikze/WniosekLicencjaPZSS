@@ -7,6 +7,8 @@ interface Props {
   starts: Start[]
   years: number[]
   defaultYear: number
+  /** Przy wyszukaniu jednej osoby panel wniosku otwiera się od razu. */
+  licenseOpenInitially?: boolean
 }
 
 interface EventGroup {
@@ -30,8 +32,8 @@ const normalize = (s: string) =>
     .sort()
     .join(' ')
 
-export function AthleteResults({ query, starts, years, defaultYear }: Props) {
-  const [licenseOpen, setLicenseOpen] = useState(false)
+export function AthleteResults({ query, starts, years, defaultYear, licenseOpenInitially = false }: Props) {
+  const [licenseOpen, setLicenseOpen] = useState(licenseOpenInitially)
 
   // Jeden komunikat PDF = jedna karta zawodów.
   const events = useMemo(() => {
@@ -69,8 +71,8 @@ export function AthleteResults({ query, starts, years, defaultYear }: Props) {
               : `${starts.length} ${plural(starts.length, 'start', 'starty', 'startów')} na ${events.length} ${plural(events.length, 'zawodach', 'zawodach', 'zawodach')}`}
           </p>
         </div>
-        <button className={licenseOpen ? 'secondary active' : 'secondary'} onClick={() => setLicenseOpen((o) => !o)}>
-          {licenseOpen ? 'Ukryj wniosek' : 'Wniosek PZSS'}
+        <button className={licenseOpen ? 'secondary active' : 'primary'} onClick={() => setLicenseOpen((o) => !o)}>
+          {licenseOpen ? 'Ukryj wniosek' : 'Wniosek PZSS →'}
         </button>
       </header>
 

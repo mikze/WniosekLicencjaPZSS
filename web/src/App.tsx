@@ -64,13 +64,13 @@ export default function App() {
       <header className="masthead">
         <h1>Szukajka startów</h1>
         <p className="muted">
-          Wyniki zawodników z komunikatów KS AGAT Złotoryja i wniosek PZSS o przedłużenie licencji.
+          Starty zawodników z komunikatów KS AGAT Złotoryja: wniosek PZSS o przedłużenie licencji i porównanie wyników.
         </p>
       </header>
 
       <nav className="tabs" role="tablist" aria-label="Widok">
         <button role="tab" aria-selected={tab === 'szukaj'} className={tab === 'szukaj' ? 'tab active' : 'tab'} onClick={() => openTab('szukaj')}>
-          Wyszukiwanie
+          Wniosek PZSS i starty
         </button>
         <button
           role="tab"
@@ -87,6 +87,28 @@ export default function App() {
       </div>
 
       <div role="tabpanel" hidden={tab !== 'szukaj'}>
+        <section className="card intro">
+          <p>
+            <strong>Wygeneruj wniosek PZSS o przedłużenie licencji zawodniczej</strong> na podstawie startów z komunikatów
+            klubu. Program sam sprawdzi, czy zawodnik spełnia warunki (4 starty w dyscyplinie wiodącej i po 2 w pozostałych),
+            i uzupełni tabelę zawodów we wniosku.
+          </p>
+          <ol className="steps">
+            <li>
+              <strong>Wpisz zawodnika</strong>
+              <span>imię i nazwisko, wybierz rok</span>
+            </li>
+            <li>
+              <strong>Kliknij „Wniosek PZSS”</strong>
+              <span>przy nazwisku zobaczysz, czy spełnia warunki</span>
+            </li>
+            <li>
+              <strong>Sprawdź podgląd i pobierz PDF</strong>
+              <span>PESEL, nr licencji i podpis dopisz ręcznie</span>
+            </li>
+          </ol>
+        </section>
+
         <SearchForm years={years} loading={loading} onSearch={runSearch} />
 
         {error && <p className="error">{error}</p>}
@@ -123,6 +145,7 @@ export default function App() {
                 starts={state.response.results.filter((r) => r.query === name)}
                 years={years}
                 defaultYear={defaultYear}
+                licenseOpenInitially={state.names.length === 1}
               />
             ))}
           </main>

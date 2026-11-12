@@ -105,12 +105,16 @@ export async function getLicensePlan(req: LicenseRequest, signal?: AbortSignal):
   return (await post('/api/license', req, signal)).json()
 }
 
-/** Pobiera uzupełniony wniosek PDF i zapisuje go w przeglądarce. */
-export async function downloadLicensePdf(req: LicenseRequest): Promise<void> {
-  const res = await post('/api/license/pdf', req)
-  const blob = await res.blob()
+/** Uzupełniony wniosek PDF (do podglądu albo zapisania). */
+export async function fetchLicensePdf(req: LicenseRequest, signal?: AbortSignal): Promise<{ blob: Blob; fileName: string }> {
+  const res = await post('/api/license/pdf', req, signal)
   const fileName =
     /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? `wniosek-${req.year}.pdf`
+  return { blob: await res.blob(), fileName }
+}
+
+/** Zapisuje plik w przeglądarce (pobieranie). */
+export function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

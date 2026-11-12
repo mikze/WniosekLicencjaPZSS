@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import {
   DISCIPLINES,
-  downloadLicensePdf,
+  fetchLicensePdf,
   getLicensePlan,
+  saveBlob,
   type Discipline,
   type LicensePlan,
   type LicenseRequest,
@@ -13,6 +14,17 @@ interface Props {
   name: string
   years: number[]
   defaultYear: number
+}
+
+// pdf.js (ok. 1 MB) wczytuje się dopiero przy pierwszym otwarciu podglądu.
+const PdfPreview = lazy(() => import('./PdfPreview'))
+
+/** Otwiera PDF w nowej karcie (wbudowana przeglądarka PDF — można powiększać i drukować). */
+function openBlob(blob: Blob) {
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener')
+  // Karta zdąży wczytać plik, potem zwalniamy pamięć.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 const LABEL: Record<Discipline, string> = { pistolet: 'Pistolet', karabin: 'Karabin', strzelba: 'Strzelba' }
@@ -29,6 +41,8 @@ export function LicensePanel({ name, years, defaultYear }: Props) {
   const [result, setResult] = useState<{ key: string; plan?: LicensePlan; error?: string } | null>(null)
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [preview, setPreview] = useState<{ key: string; blob?: Blob; fileName?: string; error?: string } | null>(null)
 
   const req: LicenseRequest = { name, year, licensed, leading, oneXPerRow }
   const reqKey = JSON.stringify(req)
@@ -44,6 +58,19 @@ export function LicensePanel({ name, years, defaultYear }: Props) {
     return () => controller.abort()
   }, [reqKey])
 
+  // Podgląd PDF-a odświeża się razem z ustawieniami, gdy jest otwarty.
+  useEffect(() => {
+    if (!previewOpen) return
+    const controller = new AbortController()
+    fetchLicensePdf(JSON.parse(reqKey), controller.signal)
+      .then(({ blob, fileName }) => setPreview({ key: reqKey, blob, fileName }))
+      .catch((e: Error) => {
+        if (e.name !== 'AbortError') setPreview((cur) => ({ ...cur, key: reqKey, error: e.message }))
+      })
+    return () => controller.abort()
+  }, [reqKey, previewOpen])
+
+  const previewLoading = previewOpen && preview?.key !== reqKey
   const loading = result?.key !== reqKey
   const plan = result?.plan ?? null
   const error = (!loading && result?.error) || downloadError
@@ -55,7 +82,12 @@ export function LicensePanel({ name, years, defaultYear }: Props) {
     setDownloading(true)
     setDownloadError(null)
     try {
-      await downloadLicensePdf(req)
+      // Gdy podgląd jest aktualny, zapisujemy dokładnie ten sam plik.
+      if (preview?.key === reqKey && preview.blob && preview.fileName) saveBlob(preview.blob, preview.fileName)
+      else {
+        const { blob, fileName } = await fetchLicensePdf(req)
+        saveBlob(blob, fileName)
+      }
     } catch (e) {
       setDownloadError((e as Error).message)
     } finally {
@@ -188,10 +220,33 @@ export function LicensePanel({ name, years, defaultYear }: Props) {
             <button className="primary" onClick={download} disabled={downloading || loading}>
               {downloading ? 'Przygotowuję…' : 'Pobierz wniosek PDF'}
             </button>
+            <button className={previewOpen ? 'secondary active' : 'secondary'} onClick={() => setPreviewOpen((o) => !o)}>
+              {previewOpen ? 'Ukryj podgląd' : 'Podgląd PDF'}
+            </button>
             <span className="hint">
               Program wpisuje nazwisko, rok i starty. PESEL, numery licencji i podpisy uzupełnij ręcznie.
             </span>
           </div>
+
+          {previewOpen && (
+            <div className={previewLoading ? 'pdf-preview stale' : 'pdf-preview'}>
+              {preview?.error && preview.key === reqKey && <p className="error">{preview.error}</p>}
+              {!preview?.blob && <p className="muted">Przygotowuję podgląd…</p>}
+              {preview?.blob && (
+                <div className="preview-bar">
+                  <span className="muted small">Tak będzie wyglądał pobrany wniosek.</span>
+                  <button className="link-button" onClick={() => openBlob(preview.blob!)}>
+                    Otwórz w pełnym rozmiarze ↗
+                  </button>
+                </div>
+              )}
+              {preview?.blob && (
+                <Suspense fallback={<p className="muted">Wczytuję podgląd…</p>}>
+                  <PdfPreview pdf={preview.blob} />
+                </Suspense>
+              )}
+            </div>
+          )}
         </div>
       )}
       {!plan && loading && <p className="muted">Liczę starty…</p>}
