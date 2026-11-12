@@ -61,14 +61,14 @@ api.MapPost("/search", async (SearchRequest req, StartSearch search, Cancellatio
 api.MapPost("/license", async (LicenseRequest req, StartSearch search, CancellationToken ct) =>
 {
     if (Validate([req.Name], [req.Year]) is { } error) return error;
-    var (plan, athlete) = await BuildPlanAsync(req, search, ct);
-    return Results.Ok(Dto.FromPlan(plan, athlete, req.Year));
+    var (plan, athlete, available) = await BuildPlanAsync(req, search, ct);
+    return Results.Ok(Dto.FromPlan(plan, athlete, req.Year, available));
 });
 
 api.MapPost("/license/pdf", async (LicenseRequest req, StartSearch search, CancellationToken ct) =>
 {
     if (Validate([req.Name], [req.Year]) is { } error) return error;
-    var (plan, athlete) = await BuildPlanAsync(req, search, ct);
+    var (plan, athlete, _) = await BuildPlanAsync(req, search, ct);
     var pdf = LicenseApplication.Render(LicenseApplication.DefaultTemplatePath, LicenseApplication.DefaultFontPath,
         athlete, req.Year, plan.Rows);
     var fileName = $"wniosek-{req.Year}-{string.Join('_', NameMatcher.Tokenize(athlete))}.pdf";
@@ -93,7 +93,7 @@ app.MapFallbackToFile("index.html");
 
 app.Run();
 
-static async Task<(LicensePlan Plan, string Athlete)> BuildPlanAsync(LicenseRequest req, StartSearch search, CancellationToken ct)
+static async Task<(LicensePlan Plan, string Athlete, int AvailableRows)> BuildPlanAsync(LicenseRequest req, StartSearch search, CancellationToken ct)
 {
     var name = req.Name.Trim();
     var outcome = await search.RunAsync([name], [StartSearch.YearPage(req.Year)], ct: ct);
@@ -105,7 +105,10 @@ static async Task<(LicensePlan Plan, string Athlete)> BuildPlanAsync(LicenseRequ
     var plan = LicenseApplication.BuildRows(outcome.Results, req.Year, leading, licensed);
     if (req.OneXPerRow)
         plan = LicenseApplication.OneDisciplinePerRow(plan);
-    return (plan, LicenseApplication.AthleteName(outcome.Results, name));
+    var available = plan.Rows.Count;
+    if (!req.AllStarts)
+        plan = LicenseApplication.TrimToRequirements(plan);
+    return (plan, LicenseApplication.AthleteName(outcome.Results, name), available);
 }
 
 static List<string> Clean(IEnumerable<string> names) =>

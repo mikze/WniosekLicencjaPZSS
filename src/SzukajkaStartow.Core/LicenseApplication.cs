@@ -242,6 +242,70 @@ public static partial class LicenseApplication
         return plan with { Rows = rows };
     }
 
+    /// <summary>
+    /// Zostawia najmniejszy zestaw wierszy, który spełnia wymagania PZSS (np. 4 × karabin, 2 × pistolet, 2 × strzelba),
+    /// zamiast wpisywać wszystkie starty z roku. Gdy warunki nie są spełnione, plan zostaje bez zmian.
+    /// Przy remisie wybiera całe zawody przed rozpisanymi konkurencjami i wcześniejsze terminy; kolejność wierszy się nie zmienia.
+    /// </summary>
+    public static LicensePlan TrimToRequirements(LicensePlan plan)
+    {
+        if (!plan.MeetsRequirements) return plan;
+
+        var required = plan.Required.Keys.ToArray();
+        Discipline Mask(LicenseRow r) => required.Aggregate(Discipline.None, (acc, d) => r.Disciplines.HasFlag(d) ? acc | d : acc);
+
+        // Wiersze o tym samym zestawie dyscyplin są wymienne — szukamy, ile wziąć z każdego zestawu.
+        var groups = plan.Rows
+            .Select((row, index) => (row, index))
+            .Where(x => Mask(x.row) != Discipline.None)
+            .GroupBy(x => Mask(x.row))
+            .Select(g => (Mask: g.Key, Rows: g.OrderBy(x => x.row.Note is null ? 0 : 1).ThenBy(x => x.index).ToList()))
+            .ToList();
+        int maxNeeded = plan.Required.Values.Max();
+
+        int[]? best = null;
+        int bestTotal = int.MaxValue, bestWhole = -1;
+        var take = new int[groups.Count];
+        void Search(int g)
+        {
+            if (g == groups.Count)
+            {
+                foreach (var d in required)
+                {
+                    int have = 0;
+                    for (int i = 0; i < groups.Count; i++)
+                        if (groups[i].Mask.HasFlag(d)) have += take[i];
+                    if (have < plan.Required[d]) return;
+                }
+                int total = take.Sum();
+                // Remis: więcej wierszy z kilkoma dyscyplinami naraz (całe zawody zamiast rozpisanych konkurencji).
+                int whole = take.Select((t, i) => t * BitCount(groups[i].Mask)).Sum();
+                if (total < bestTotal || total == bestTotal && whole > bestWhole)
+                {
+                    best = (int[])take.Clone();
+                    bestTotal = total;
+                    bestWhole = whole;
+                }
+                return;
+            }
+            for (int n = 0; n <= Math.Min(groups[g].Rows.Count, maxNeeded); n++)
+            {
+                take[g] = n;
+                Search(g + 1);
+            }
+            take[g] = 0;
+        }
+        Search(0);
+        if (best is null) return plan;
+
+        var keep = groups.SelectMany((g, i) => g.Rows.Take(best[i]).Select(x => x.index)).ToHashSet();
+        var rows = plan.Rows.Where((_, i) => keep.Contains(i)).ToList();
+        var counts = AllDisciplines.ToDictionary(d => d, d => rows.Count(r => r.Disciplines.HasFlag(d)));
+        return plan with { Rows = rows, Counts = counts };
+    }
+
+    private static int BitCount(Discipline d) => System.Numerics.BitOperations.PopCount((uint)d);
+
     /// <summary>Nazwisko i imię w formie do wniosku, np. "NOWAK JAN" (najczęstszy zapis w protokołach).</summary>
     public static string AthleteName(IEnumerable<StartResult> results, string fallback)
     {

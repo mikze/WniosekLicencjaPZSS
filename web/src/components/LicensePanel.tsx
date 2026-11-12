@@ -36,6 +36,7 @@ export function LicensePanel({ name, years, defaultYear }: Props) {
   const [licensed, setLicensed] = useState<Discipline[]>([])
   const [leading, setLeading] = useState<Discipline | null>(null)
   const [oneXPerRow, setOneXPerRow] = useState(false)
+  const [allStarts, setAllStarts] = useState(false)
 
   // Wynik zapamiętany razem z ustawieniami, dla których go policzono.
   const [result, setResult] = useState<{ key: string; plan?: LicensePlan; error?: string } | null>(null)
@@ -44,7 +45,7 @@ export function LicensePanel({ name, years, defaultYear }: Props) {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [preview, setPreview] = useState<{ key: string; blob?: Blob; fileName?: string; error?: string } | null>(null)
 
-  const req: LicenseRequest = { name, year, licensed, leading, oneXPerRow }
+  const req: LicenseRequest = { name, year, licensed, leading, oneXPerRow, allStarts }
   const reqKey = JSON.stringify(req)
 
   // Plan wniosku przelicza się po każdej zmianie ustawień.
@@ -143,6 +144,11 @@ export function LicensePanel({ name, years, defaultYear }: Props) {
           <input type="checkbox" checked={oneXPerRow} onChange={(e) => setOneXPerRow(e.target.checked)} />
           <span>Jeden X w wierszu</span>
         </label>
+
+        <label className="toggle">
+          <input type="checkbox" checked={allStarts} onChange={(e) => setAllStarts(e.target.checked)} />
+          <span>Wpisz wszystkie starty</span>
+        </label>
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -211,6 +217,12 @@ export function LicensePanel({ name, years, defaultYear }: Props) {
                 </tbody>
               </table>
             </div>
+          )}
+          {plan.rows.length < plan.availableRows && (
+            <p className="hint">
+              Wpisano {plan.rows.length} z {plan.availableRows} możliwych wierszy — tyle wystarczy do spełnienia warunków.
+              Zaznacz „Wpisz wszystkie starty”, żeby wpisać wszystkie.
+            </p>
           )}
           {plan.rows.length > 8 && (
             <p className="hint">Wzór ma 8 wierszy — kolejne trafią na drugą stronę wniosku.</p>

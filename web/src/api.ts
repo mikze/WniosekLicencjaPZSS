@@ -33,6 +33,8 @@ export interface LicenseRequest {
   /** null = program sam wybiera dyscyplinę wiodącą. */
   leading: Discipline | null
   oneXPerRow: boolean
+  /** true = wszystkie starty z roku; false = tylko tyle, ile trzeba do spełnienia warunków. */
+  allStarts: boolean
 }
 
 export interface LicenseRow {
@@ -62,6 +64,8 @@ export interface LicensePlan {
   athlete: string
   year: number
   rows: LicenseRow[]
+  /** Ile wierszy byłoby przy wpisaniu wszystkich startów. */
+  availableRows: number
   leading: Discipline
   licensed: Discipline[]
   counts: DisciplineCount[]

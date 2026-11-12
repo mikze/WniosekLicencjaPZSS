@@ -25,7 +25,9 @@ public sealed record StartDto(
 
 /// <param name="Licensed">Dyscypliny objęte licencją ("pistolet", "karabin", "strzelba"); puste = wykryj automatycznie.</param>
 /// <param name="Leading">Dyscyplina wiodąca; null = wybierz automatycznie.</param>
-public sealed record LicenseRequest(string Name, int Year, List<string>? Licensed, string? Leading, bool OneXPerRow);
+/// <param name="AllStarts">true = wpisz wszystkie starty z roku; false = tylko tyle, ile trzeba do spełnienia warunków.</param>
+public sealed record LicenseRequest(string Name, int Year, List<string>? Licensed, string? Leading, bool OneXPerRow,
+    bool AllStarts = false);
 
 public sealed record LicenseRowDto(string Name, string Date, string? Place, bool Pistol, bool Rifle, bool Shotgun, string? Note);
 
@@ -37,6 +39,7 @@ public sealed record LicensePlanDto(
     string Athlete,
     int Year,
     List<LicenseRowDto> Rows,
+    int AvailableRows,
     string Leading,
     List<string> Licensed,
     List<DisciplineCountDto> Counts,
@@ -61,10 +64,11 @@ public static class Dto
         r.Source.Url,
         r.Page);
 
-    public static LicensePlanDto FromPlan(LicensePlan plan, string athlete, int year) => new(
+    public static LicensePlanDto FromPlan(LicensePlan plan, string athlete, int year, int availableRows) => new(
         athlete,
         year,
         plan.Rows.Select(r => new LicenseRowDto(r.Name, r.Date, r.Place, r.Pistol, r.Rifle, r.Shotgun, r.Note)).ToList(),
+        availableRows,
         Name(plan.Leading),
         LicenseApplication.AllDisciplines.Where(d => plan.Licensed.HasFlag(d)).Select(Name).ToList(),
         LicenseApplication.AllDisciplines.Select(d => new DisciplineCountDto(

@@ -10,7 +10,8 @@ bool allYears = false, refresh = false, verbose = false;
 string? applicationPath = null;
 int? applicationYear = null;
 Discipline? leading = null;  // null = wybór automatyczny
-bool oneXPerRow = false;    // --jeden-x: w każdym wierszu tylko jedna dyscyplina
+bool oneXPerRow = false;
+bool allStarts = false;      // --wszystkie-starty: wpisz wszystkie starty, a nie tylko tyle, ile trzeba do warunków    // --jeden-x: w każdym wierszu tylko jedna dyscyplina
 Discipline? licensed = null; // null = sprawdź pełną licencję, a gdy się nie da — największy pasujący zakres
 string templatePath = LicenseApplication.DefaultTemplatePath;
 string fontPath = LicenseApplication.DefaultFontPath;
@@ -38,6 +39,7 @@ for (int i = 0; i < args.Length; i++)
         case "--rok-wniosku": applicationYear = int.Parse(Next()); break;
         case "--wiodaca": leading = ParseDiscipline(Next()); break;
         case "--jeden-x": oneXPerRow = true; break;
+        case "--wszystkie-starty": allStarts = true; break;
         case "--licencja":
             licensed = Next().Split([',', '+', ' '], StringSplitOptions.RemoveEmptyEntries)
                 .Aggregate(Discipline.None, (acc, x) => acc | ParseDiscipline(x));
@@ -106,6 +108,9 @@ if (applicationPath is not null)
         var plan = LicenseApplication.BuildRows(mine, applicationYear.Value, leading, licensed);
         if (oneXPerRow)
             plan = LicenseApplication.OneDisciplinePerRow(plan);
+        var allRowsCount = plan.Rows.Count;
+        if (!allStarts)
+            plan = LicenseApplication.TrimToRequirements(plan);
         var rows = plan.Rows;
         var athlete = LicenseApplication.AthleteName(mine, query);
         // Przy kilku zawodnikach każdy dostaje osobny plik: wniosek-NOWAK_JAN.pdf
@@ -124,6 +129,9 @@ if (applicationPath is not null)
                 $"{(row.Pistol ? "P" : "-")}{(row.Rifle ? "K" : "-")}{(row.Shotgun ? "S" : "-")}" +
                 (row.Note is null ? "" : $" | {row.Note}"));
         PrintVerdict(plan, licensed is null);
+        if (rows.Count < allRowsCount)
+            Console.WriteLine($"  Wpisano {rows.Count} z {allRowsCount} wierszy — tyle wystarczy do spełnienia warunków " +
+                "(--wszystkie-starty wpisze wszystkie).");
         if (rows.Count > LicenseApplication.RowsPerPage)
             Console.WriteLine($"  Uwaga: {rows.Count} zawodów — wniosek ma {Math.Ceiling(rows.Count / (double)LicenseApplication.RowsPerPage)} strony " +
                 $"(po {LicenseApplication.RowsPerPage} wierszy). Usuń zbędne, jeśli wystarczy jedna.");
@@ -207,6 +215,8 @@ static void PrintHelp() => Console.WriteLine("""
           --rok-wniosku <RRRR> rok, z którego brać starty (domyślnie bieżący)
           --jeden-x            w każdym wierszu tylko jeden X: wiersze pogrupowane według dyscypliny
                                (najpierw wiodąca, potem pozostałe)
+          --wszystkie-starty   wpisz wszystkie starty z roku (domyślnie tylko tyle, ile trzeba
+                               do spełnienia warunków PZSS)
           --licencja <lista>   dyscypliny objęte licencją, np. karabin albo pistolet,karabin
                                (domyślnie: wszystkie; gdy warunki nie są spełnione, program sam
                                sprawdzi, dla jakiego zakresu licencji zawodnik je spełnia)

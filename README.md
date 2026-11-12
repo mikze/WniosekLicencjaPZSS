@@ -93,6 +93,7 @@ ostrzega, jeśli pasuje kilka osób.
 | `-v, --szczegoly` | pokaż szczegóły i surowy wiersz z PDF-a |
 | `-w, --wniosek <plik.pdf>` | uzupełnij wniosek o przedłużenie licencji (patrz niżej) |
 | `--rok-wniosku <RRRR>` | z którego roku brać starty do wniosku (domyślnie bieżący) |
+| `--wszystkie-starty` | wpisz do wniosku wszystkie starty z roku (domyślnie tylko tyle, ile trzeba do warunków) |
 | `--jeden-x` | we wniosku jeden X w wierszu, wiersze pogrupowane według dyscypliny |
 | `--licencja <lista>` | dyscypliny objęte licencją, np. `karabin` lub `pistolet,karabin` (domyślnie wykrywane) |
 | `--wiodaca <dyscyplina>` | wymuś dyscyplinę wiodącą: pistolet / karabin / strzelba (domyślnie wybór automatyczny) |
@@ -122,6 +123,11 @@ a przy licencji na samą broń jednego rodzaju po prostu 4 starty w tej dyscypli
   i pokazuje, czego brakuje do pełnej licencji.
 - Gdy jeden wiersz na zawody nie wystarcza, konkurencje z tych samych zawodów są rozpisywane na osobne wiersze.
   Na przykład Psp i Pcz na „Wiosnie 2026” to 2 starty pistoletowe.
+
+Do wniosku trafia tylko tyle startów, ile trzeba do spełnienia warunków: najmniejszy zestaw wierszy,
+np. 4 zawody zamiast wszystkich 10. Dzięki temu wniosek zwykle mieści się na jednej stronie. Pierwszeństwo
+mają całe zawody i wcześniejsze terminy. Opcja `--wszystkie-starty` (w wersji webowej przełącznik „Wpisz
+wszystkie starty”) wpisuje wszystkie starty z roku.
 
 Z opcją `--jeden-x` każdy wiersz ma tylko jeden X. Wiersze są pogrupowane według dyscypliny:
 najpierw wiodąca, potem pozostałe. Na przykład 4 wiersze pistoletowe, potem 2 karabinowe i 2 ze strzelby.
