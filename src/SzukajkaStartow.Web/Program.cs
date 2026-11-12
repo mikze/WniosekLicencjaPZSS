@@ -75,6 +75,19 @@ api.MapPost("/license/pdf", async (LicenseRequest req, StartSearch search, Cance
     return Results.File(pdf, "application/pdf", fileName);
 });
 
+// Statystyki roku ze wszystkich protokołów. Liczenie trwa kilka sekund, więc wynik trzymamy godzinę w pamięci.
+api.MapGet("/ranking", async (int year, StartSearch search, IMemoryCache cache, CancellationToken ct) =>
+{
+    if (Validate(["ranking"], [year]) is { } error) return error;
+    var ranking = await cache.GetOrCreateAsync($"ranking-{year}", async entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
+        var outcome = await search.RunAllAsync([StartSearch.YearPage(year)], ct);
+        return RankingBuilder.Build(outcome.Results, year);
+    });
+    return Results.Ok(ranking);
+});
+
 // Wszystkie inne adresy obsługuje aplikacja React.
 app.MapFallbackToFile("index.html");
 

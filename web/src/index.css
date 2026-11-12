@@ -20,7 +20,7 @@
   --c3: #15803d;
   --c4: #9333ea;
   --c5: #a16207;
-  --c6: #0e7490;
+  --c6: #0891b2;
 
   color-scheme: light;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
@@ -46,12 +46,12 @@
     --bad: #f07c70;
     --bad-soft: #3a1c1a;
     --shadow: none;
-    --c1: #fb923c;
-    --c2: #60a5fa;
-    --c3: #4ade80;
-    --c4: #c084fc;
-    --c5: #facc15;
-    --c6: #22d3ee;
+    --c1: #ea580c;
+    --c2: #3b82f6;
+    --c3: #16a34a;
+    --c4: #a855f7;
+    --c5: #c08404;
+    --c6: #0891b2;
     color-scheme: dark;
   }
 }
@@ -150,6 +150,15 @@ select {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
+}
+
+select {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.section-head > * {
+  min-width: 0;
 }
 
 textarea {
@@ -792,6 +801,182 @@ tbody tr:last-child td {
 @media (max-width: 600px) {
   .steps {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Ranking */
+
+.ranking .intro {
+  grid-template-columns: 1fr auto;
+  align-items: end;
+}
+
+.year-select select {
+  min-width: 110px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.tile {
+  padding: 12px 14px;
+  display: grid;
+  gap: 2px;
+}
+
+.tile-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.tile-value {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.tile-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.table-tools {
+  display: flex;
+  gap: 8px 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.table-tools input[type='search'] {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-width: 220px;
+}
+
+.ranking-table td {
+  white-space: nowrap;
+}
+
+.ranking-table .strong {
+  font-weight: 600;
+}
+
+.ranking-table .license-ok {
+  color: var(--ok);
+}
+
+th .sort {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+
+th .sort.active {
+  color: var(--text);
+}
+
+.name-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+
+.name-link:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
+.table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Frekwencja: poziome słupki, jedna seria */
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  display: grid;
+  gap: 6px;
+}
+
+.bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 12px;
+  align-items: center;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.bars li:hover {
+  background: var(--surface-2);
+}
+
+.bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-date {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bar {
+  height: 12px;
+  min-width: 2px;
+  background: var(--accent);
+  border-radius: 0 4px 4px 0;
+}
+
+.bar-value {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .ranking .intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bars li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .table-tools input[type='search'] {
+    min-width: 0;
+    width: 100%;
   }
 }
 

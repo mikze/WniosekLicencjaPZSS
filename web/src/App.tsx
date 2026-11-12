@@ -2,13 +2,22 @@ import { useEffect, useRef, useState } from 'react'
 import { getYears, search, type SearchResponse } from './api'
 import { AthleteResults } from './components/AthleteResults'
 import { CompareView } from './components/CompareView'
+import { RankingView } from './components/RankingView'
 import { SearchForm } from './components/SearchForm'
 import { downloadCsv } from './csv'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
-type Tab = 'szukaj' | 'porownanie'
-const tabFromHash = (): Tab => (window.location.hash === '#porownanie' ? 'porownanie' : 'szukaj')
+type Tab = 'szukaj' | 'porownanie' | 'ranking'
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'szukaj', label: 'Wniosek PZSS i starty' },
+  { id: 'porownanie', label: 'Porównanie' },
+  { id: 'ranking', label: 'Ranking' },
+]
+const tabFromHash = (): Tab => {
+  const h = window.location.hash.slice(1)
+  return h === 'porownanie' || h === 'ranking' ? h : 'szukaj'
+}
 
 interface SearchState {
   names: string[]
@@ -31,8 +40,17 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
   const openTab = (t: Tab) => {
-    window.location.hash = t === 'porownanie' ? 'porownanie' : ''
+    window.location.hash = t === 'szukaj' ? '' : t
     setTab(t)
+  }
+
+  // Kliknięcie zawodnika w rankingu: pierwsza zakładka z jego startami i wnioskiem za ten rok.
+  const [preset, setPreset] = useState<{ names: string[]; years: number[]; key: number } | null>(null)
+  const openAthlete = (name: string, year: number) => {
+    setPreset((p) => ({ names: [name], years: [year], key: (p?.key ?? 0) + 1 }))
+    openTab('szukaj')
+    window.scrollTo({ top: 0 })
+    void runSearch([name], [year])
   }
 
   useEffect(() => {
@@ -64,23 +82,27 @@ export default function App() {
       <header className="masthead">
         <h1>Szukajka startów</h1>
         <p className="muted">
-          Starty zawodników z komunikatów KS AGAT Złotoryja: wniosek PZSS o przedłużenie licencji i porównanie wyników.
+          Starty zawodników z komunikatów KS AGAT Złotoryja: wniosek PZSS o przedłużenie licencji, porównanie i ranking.
         </p>
       </header>
 
       <nav className="tabs" role="tablist" aria-label="Widok">
-        <button role="tab" aria-selected={tab === 'szukaj'} className={tab === 'szukaj' ? 'tab active' : 'tab'} onClick={() => openTab('szukaj')}>
-          Wniosek PZSS i starty
-        </button>
-        <button
-          role="tab"
-          aria-selected={tab === 'porownanie'}
-          className={tab === 'porownanie' ? 'tab active' : 'tab'}
-          onClick={() => openTab('porownanie')}
-        >
-          Porównanie
-        </button>
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
+            className={tab === t.id ? 'tab active' : 'tab'}
+            onClick={() => openTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
       </nav>
+
+      <div role="tabpanel" hidden={tab !== 'ranking'}>
+        <RankingView years={years} active={tab === 'ranking'} onOpenAthlete={openAthlete} />
+      </div>
 
       <div role="tabpanel" hidden={tab !== 'porownanie'}>
         <CompareView years={years} />
@@ -109,7 +131,14 @@ export default function App() {
           </ol>
         </section>
 
-        <SearchForm years={years} loading={loading} onSearch={runSearch} />
+        <SearchForm
+          key={preset?.key ?? 0}
+          years={years}
+          loading={loading}
+          onSearch={runSearch}
+          initialNames={preset?.names}
+          initialYears={preset?.years}
+        />
 
         {error && <p className="error">{error}</p>}
 

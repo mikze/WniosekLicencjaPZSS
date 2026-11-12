@@ -30,15 +30,28 @@ public sealed class StartSearch(HttpClient http, string cacheDir)
     public async Task<List<string>> GetYearPagesAsync(string pageUrl, CancellationToken ct) =>
         await _scraper.GetYearPagesAsync(pageUrl, ct);
 
-    public async Task<SearchOutcome> RunAsync(
+    public Task<SearchOutcome> RunAsync(
         IReadOnlyList<string> names,
         IReadOnlyList<string> pages,
         bool refresh = false,
         Action<string>? log = null,
         IProgress<(int Done, int Total)>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        RunCoreAsync(names.Select(n => new NameMatcher(n)).ToList(), names, pages, refresh, log, progress, ct);
+
+    /// <summary>Wszyscy zawodnicy ze wszystkich protokołów na podanych stronach (do rankingu).</summary>
+    public Task<SearchOutcome> RunAllAsync(IReadOnlyList<string> pages, CancellationToken ct = default) =>
+        RunCoreAsync(null, [], pages, false, null, null, ct);
+
+    private async Task<SearchOutcome> RunCoreAsync(
+        IReadOnlyList<NameMatcher>? matchers,
+        IReadOnlyList<string> names,
+        IReadOnlyList<string> pages,
+        bool refresh,
+        Action<string>? log,
+        IProgress<(int Done, int Total)>? progress,
+        CancellationToken ct)
     {
-        var matchers = names.Select(n => new NameMatcher(n)).ToList();
         var cache = new PdfCache(http, cacheDir, refresh);
         var warnings = new ConcurrentBag<string>();
 

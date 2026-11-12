@@ -38,8 +38,9 @@ public static partial class ResultExtractor
         }
     }
 
+    /// <param name="matchers">Szukani zawodnicy; null = wszyscy zawodnicy z protokołów (do rankingu).</param>
     public static (string? Title, List<StartResult> Results) Extract(
-        List<TextLine> lines, IReadOnlyList<NameMatcher> matchers, PdfLink source)
+        List<TextLine> lines, IReadOnlyList<NameMatcher>? matchers, PdfLink source)
     {
         var results = new List<StartResult>();
         string? title = null;
@@ -173,6 +174,20 @@ public static partial class ResultExtractor
 
             if (inJudgesSection) continue;
 
+            if (matchers is null)
+            {
+                // Tryb „wszyscy”: zawodnik to tekst w kolumnie „Nazwisko” wiersza z wynikiem.
+                if (header is null) continue;
+                var nameIdx = FindNameCellByHeader(line.Cells, header);
+                if (nameIdx < 0) continue;
+                if (!line.Cells.Where((_, k) => k != nameIdx).Any(c => IsNumeric(c.Text) || IsStatus(c.Text)))
+                    continue;
+                var continuation = CollectContinuation(lines, i, line.Cells[nameIdx], header);
+                results.Add(BuildResult(null, source, title, competition, shootingDate, header,
+                    line, nameIdx, continuation) with { LineIndex = i });
+                continue;
+            }
+
             foreach (var matcher in matchers)
             {
                 var nameIdx = FindNameCell(line.Cells, matcher);
@@ -220,6 +235,18 @@ public static partial class ResultExtractor
         return cells;
     }
 
+    private static int FindNameCellByHeader(IReadOnlyList<Cell> cells, Header header)
+    {
+        for (int k = 0; k < cells.Count; k++)
+        {
+            var text = cells[k].Text;
+            if (IsNumeric(text) || IsStatus(text) || text.Count(char.IsLetter) < 3) continue;
+            if (header.LabelFor(cells[k]) is { } label && IsNameHeader(NameMatcher.RemoveDiacritics(label).ToUpperInvariant()))
+                return k;
+        }
+        return -1;
+    }
+
     private static int FindNameCell(IReadOnlyList<Cell> cells, NameMatcher matcher)
     {
         for (int k = 0; k < cells.Count; k++)
@@ -256,7 +283,7 @@ public static partial class ResultExtractor
         return result;
     }
 
-    private static StartResult BuildResult(NameMatcher matcher, PdfLink source, string? title, string competition,
+    private static StartResult BuildResult(NameMatcher? matcher, PdfLink source, string? title, string competition,
         string? shootingDate, Header? header, TextLine line, int nameIdx, List<TextLine> continuation)
     {
         string? place = null;
@@ -280,9 +307,11 @@ public static partial class ResultExtractor
             place ??= leading.Groups[1].Value;
             athlete = leading.Groups[2].Value;
         }
+        // Cyfry sklejone z nazwiskiem w PDF-ie klubu ("Popiołek Wojciech61").
+        athlete = TrailingDigitsRegex().Replace(athlete, "");
         // Inny tekst sklejony przed nazwiskiem: "Mistrz SNAJPER 2025 NOWAK Jan".
         var words = athlete.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var firstName = matcher.FirstMatchingWord(words);
+        var firstName = matcher?.FirstMatchingWord(words) ?? -1;
         if (firstName > 0)
         {
             place ??= string.Join(' ', words[..firstName]);
@@ -329,7 +358,7 @@ public static partial class ResultExtractor
 
         return new StartResult
         {
-            Query = matcher.Query,
+            Query = matcher?.Query ?? "",
             Source = source,
             DocumentTitle = title,
             Competition = competition,
@@ -387,6 +416,9 @@ public static partial class ResultExtractor
 
     [GeneratedRegex(@"^\p{Lu}\p{L}{2,}$")]
     private static partial Regex SingleWordRegex();
+
+    [GeneratedRegex(@"(?<=\p{L})\d+$")]
+    private static partial Regex TrailingDigitsRegex();
 
     [GeneratedRegex(@"^Match Results\b", RegexOptions.IgnoreCase)]
     private static partial Regex IpscTitleRegex();

@@ -70,6 +70,66 @@ export interface LicensePlan {
   missingForFullLicense: Missing[] | null
 }
 
+export interface AthleteStat {
+  name: string
+  club: string | null
+  starts: number
+  events: number
+  gold: number
+  silver: number
+  bronze: number
+  pistol: number
+  rifle: number
+  shotgun: number
+  meetsLicense: boolean
+  licenseScope: string | null
+}
+
+export interface TopResult {
+  athlete: string
+  club: string | null
+  result: string
+  place: string | null
+  date: string | null
+  eventName: string
+}
+
+export interface CompetitionStat {
+  name: string
+  starters: number
+  starts: number
+  events: number
+  top: TopResult[]
+}
+
+export interface ClubStat {
+  club: string
+  athletes: number
+  starts: number
+  podiums: number
+}
+
+export interface EventStat {
+  date: string | null
+  name: string
+  pdfUrl: string
+  athletes: number
+  starts: number
+}
+
+export interface Ranking {
+  year: number
+  events: number
+  starts: number
+  athleteCount: number
+  clubCount: number
+  meetingLicense: number
+  athletes: AthleteStat[]
+  competitions: CompetitionStat[]
+  clubs: ClubStat[]
+  eventList: EventStat[]
+}
+
 async function request(path: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(path, init)
   if (!res.ok) {
@@ -99,6 +159,10 @@ export async function getYears(): Promise<number[]> {
 
 export async function search(names: string[], years: number[], signal?: AbortSignal): Promise<SearchResponse> {
   return (await post('/api/search', { names, years }, signal)).json()
+}
+
+export async function getRanking(year: number, signal?: AbortSignal): Promise<Ranking> {
+  return (await request(`/api/ranking?year=${year}`, { signal })).json()
 }
 
 export async function getLicensePlan(req: LicenseRequest, signal?: AbortSignal): Promise<LicensePlan> {

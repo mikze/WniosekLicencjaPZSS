@@ -9,6 +9,9 @@ interface Props {
   /** Minimalna i maksymalna liczba zawodników (np. porównanie wymaga co najmniej dwóch). */
   minNames?: number
   maxNames?: number
+  /** Wartości startowe (np. po kliknięciu zawodnika w rankingu). */
+  initialNames?: string[]
+  initialYears?: number[]
 }
 
 export function SearchForm({
@@ -19,9 +22,11 @@ export function SearchForm({
   placeholder = 'Jan Nowak\nKowalska Anna',
   minNames = 1,
   maxNames = 20,
+  initialNames,
+  initialYears,
 }: Props) {
-  const [namesText, setNamesText] = useState('')
-  const [selected, setSelected] = useState<number[] | null>(null)
+  const [namesText, setNamesText] = useState(initialNames?.join('\n') ?? '')
+  const [selected, setSelected] = useState<number[] | null>(initialYears ?? null)
 
   // Domyślnie zaznaczony najnowszy rok, dopóki użytkownik sam czegoś nie wybierze.
   const selectedYears = selected ?? (years.length > 0 ? [years[0]] : [])
