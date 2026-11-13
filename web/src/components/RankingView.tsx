@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getRanking, type AthleteStat, type Ranking } from '../api'
+import { ScoreDistribution } from './ScoreDistribution'
 
 interface Props {
   years: number[]
@@ -37,8 +38,9 @@ export function RankingView({ years, active, onOpenAthlete }: Props) {
     <div className="ranking">
       <section className="card intro">
         <p>
-          <strong>Ranking roku</strong> — statystyki wszystkich zawodników ze wszystkich komunikatów z wybranego roku:
-          najaktywniejsi, podia, kto spełnia warunki licencji PZSS, najlepsze wyniki w konkurencjach, kluby i frekwencja.
+          <strong>Ranking i statystyki roku</strong> — wszyscy zawodnicy ze wszystkich komunikatów z wybranego roku:
+          najaktywniejsi, podia, kto spełnia warunki licencji PZSS, najlepsze wyniki w konkurencjach, kluby, frekwencja
+          i rozkład punktów w konkurencjach.
         </p>
         <label className="field compact year-select">
           <span className="field-label">Rok</span>
@@ -81,6 +83,7 @@ function RankingBody({ data, onOpenAthlete }: { data: Ranking; onOpenAthlete: (n
       <Competitions data={data} onOpenAthlete={onOpenAthlete} />
       <Attendance data={data} />
       <Clubs data={data} />
+      <ScoreDistribution competitions={data.competitions} />
     </main>
   )
 }

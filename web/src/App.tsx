@@ -12,7 +12,7 @@ type Tab = 'szukaj' | 'porownanie' | 'ranking'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'szukaj', label: 'Wniosek PZSS i starty' },
   { id: 'porownanie', label: 'Porównanie' },
-  { id: 'ranking', label: 'Ranking' },
+  { id: 'ranking', label: 'Ranking i statystyki' },
 ]
 const tabFromHash = (): Tab => {
   const h = window.location.hash.slice(1)
@@ -82,7 +82,7 @@ export default function App() {
       <header className="masthead">
         <h1>Szukajka startów</h1>
         <p className="muted">
-          Starty zawodników z komunikatów KS AGAT Złotoryja: wniosek PZSS o przedłużenie licencji, porównanie i ranking.
+          Starty zawodników z komunikatów KS AGAT Złotoryja: wniosek PZSS o przedłużenie licencji, porównanie, ranking i statystyki.
         </p>
       </header>
 

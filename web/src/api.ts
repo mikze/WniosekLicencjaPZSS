@@ -104,6 +104,8 @@ export interface CompetitionStat {
   starts: number
   events: number
   top: TopResult[]
+  /** Wyniki wszystkich startów (posortowane) — do rozkładu punktów. */
+  scores: number[]
 }
 
 export interface ClubStat {

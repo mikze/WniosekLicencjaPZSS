@@ -980,6 +980,82 @@ th .sort.active {
   }
 }
 
+/* Rozkład punktów (histogram — jedna seria, bez legendy) */
+
+.dist-stats .tile-value.small-value {
+  font-size: 1.25rem;
+}
+
+.dist-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 2px 10px;
+  min-height: 34px;
+}
+
+.dist-readout {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.histogram {
+  padding: 0 2px 6px;
+}
+
+.hist-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 220px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hist-col {
+  flex: 1 1 0;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: default;
+  border-radius: 4px 4px 0 0;
+}
+
+.hist-col:hover,
+.hist-col.active,
+.hist-col:focus-visible {
+  background: var(--surface-2);
+}
+
+.hist-bar {
+  display: block;
+  width: 100%;
+  min-height: 1px;
+  background: var(--accent);
+  border-radius: 4px 4px 0 0;
+}
+
+.hist-col.active .hist-bar {
+  filter: brightness(0.85);
+}
+
+.hist-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  padding-top: 4px;
+}
+
+.hist-axis-title {
+  text-align: center;
+}
+
 .footer {
   margin-top: 48px;
   border-top: 1px solid var(--border);

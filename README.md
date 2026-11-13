@@ -16,6 +16,10 @@ pobierasz CSV, a w panelu „Wniosek PZSS” widzisz werdykt, bilans startów i 
 (z wyborem roku, zakresu licencji, dyscypliny wiodącej i układu „jeden X w wierszu”). Przycisk
 „Pobierz wniosek PDF” daje ten sam plik co wersja konsolowa.
 
+Zakładka „Porównanie” zestawia 2–6 zawodników (pojedynki, starty obok siebie, rekordy). Zakładka
+„Ranking i statystyki” czyta wszystkich zawodników z wybranego roku: najaktywniejsi, podia, kto spełnia
+warunki licencji, najlepsze wyniki i rozkład punktów w konkurencjach, kluby i frekwencja.
+
 Przeglądarka nie może sama pobierać PDF-ów ze strony klubu (CORS), dlatego pobieraniem i czytaniem PDF-ów
 zajmuje się serwer, a React tylko z nim rozmawia.
 
@@ -51,6 +55,7 @@ API (JSON):
 | `POST /api/search` | `{ "names": [...], "years": [2026] }` → starty |
 | `POST /api/license` | `{ "name", "year", "licensed": [], "leading": null, "oneXPerRow": false }` → plan wniosku i werdykt |
 | `POST /api/license/pdf` | to samo → uzupełniony wniosek PDF |
+| `GET /api/ranking?year=2026` | ranking i statystyki wszystkich zawodników z roku |
 
 ## Wersja konsolowa
 

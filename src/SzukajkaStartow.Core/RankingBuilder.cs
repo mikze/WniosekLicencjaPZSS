@@ -19,7 +19,8 @@ public sealed record AthleteStat(
 
 public sealed record TopResult(string Athlete, string? Club, string Result, string? Place, string? Date, string EventName);
 
-public sealed record CompetitionStat(string Name, int Starters, int Starts, int Events, List<TopResult> Top);
+/// <param name="Scores">Wyniki wszystkich startów w tej konkurencji (do rozkładu punktów).</param>
+public sealed record CompetitionStat(string Name, int Starters, int Starts, int Events, List<TopResult> Top, List<double> Scores);
 
 public sealed record ClubStat(string Club, int Athletes, int Starts, int Podiums);
 
@@ -101,7 +102,8 @@ public static partial class RankingBuilder
                     g.Select(r => r.Query).Distinct().Count(),
                     g.Count(),
                     g.Select(r => r.Source.Url).Distinct().Count(),
-                    best);
+                    best,
+                    g.Select(r => ParseScore(r.Result)).OfType<double>().Order().ToList());
             })
             .Where(c => c.Top.Count > 0)
             .OrderByDescending(c => c.Starters)
