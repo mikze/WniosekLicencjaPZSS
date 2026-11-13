@@ -541,9 +541,18 @@ tbody tr:last-child td {
   gap: 4px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 20px;
+  /* Na wąskim ekranie pasek zakładek przewija się w poziomie, zamiast rozpychać stronę. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tab {
+  white-space: nowrap;
+  flex: none;
   background: none;
   border: 0;
   border-bottom: 3px solid transparent;
@@ -1008,6 +1017,116 @@ th .sort.active {
   pointer-events: none;
 }
 
+/* Karta zawodnika */
+
+.card-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.card-name {
+  flex: 1 1 260px;
+}
+
+.card-name input {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.candidates {
+  padding: 14px 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.candidates p {
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ranking-table td.wrap {
+  white-space: normal;
+  min-width: 140px;
+}
+
+.form-chart {
+  display: grid;
+  gap: 6px;
+  padding: 8px 2px;
+}
+
+.form-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.form-chart .grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.form-chart .axis-label {
+  fill: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.form-chart .line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.form-chart .dot {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.form-chart .dot.best {
+  fill: var(--surface);
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.form-chart .crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+/* „Jak to działa?” */
+
+.how {
+  font-size: 0.9rem;
+}
+
+.how summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.how ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
 /* Rozkład punktów (histogram — jedna seria, bez legendy) */
 
 .dist-stats .tile-value.small-value {
@@ -1093,6 +1212,10 @@ th .sort.active {
 @media (max-width: 600px) {
   .page {
     padding-top: 20px;
+  }
+
+  .tab {
+    padding: 8px 10px;
   }
 
   .hide-narrow {

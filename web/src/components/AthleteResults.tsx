@@ -9,6 +9,8 @@ interface Props {
   defaultYear: number
   /** Przy wyszukaniu jednej osoby panel wniosku otwiera się od razu. */
   licenseOpenInitially?: boolean
+  /** Otwiera kartę zawodnika (forma, rekordy, rywale). */
+  onOpenCard?: (name: string) => void
 }
 
 interface EventGroup {
@@ -32,7 +34,7 @@ const normalize = (s: string) =>
     .sort()
     .join(' ')
 
-export function AthleteResults({ query, starts, years, defaultYear, licenseOpenInitially = false }: Props) {
+export function AthleteResults({ query, starts, years, defaultYear, licenseOpenInitially = false, onOpenCard }: Props) {
   const [licenseOpen, setLicenseOpen] = useState(licenseOpenInitially)
 
   // Jeden komunikat PDF = jedna karta zawodów.
@@ -71,9 +73,16 @@ export function AthleteResults({ query, starts, years, defaultYear, licenseOpenI
               : `${starts.length} ${plural(starts.length, 'start', 'starty', 'startów')} na ${events.length} ${plural(events.length, 'zawodach', 'zawodach', 'zawodach')}`}
           </p>
         </div>
-        <button className={licenseOpen ? 'secondary active' : 'primary'} onClick={() => setLicenseOpen((o) => !o)}>
-          {licenseOpen ? 'Ukryj wniosek' : 'Wniosek PZSS →'}
-        </button>
+        <div className="header-actions">
+          {onOpenCard && starts.length > 0 && (
+            <button className="secondary" onClick={() => onOpenCard(query)}>
+              Karta zawodnika
+            </button>
+          )}
+          <button className={licenseOpen ? 'secondary active' : 'primary'} onClick={() => setLicenseOpen((o) => !o)}>
+            {licenseOpen ? 'Ukryj wniosek' : 'Wniosek PZSS →'}
+          </button>
+        </div>
       </header>
 
       {athletes.length > 1 && (

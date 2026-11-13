@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { getYears, search, type SearchResponse } from './api'
+import { AthleteCard } from './components/AthleteCard'
 import { AthleteResults } from './components/AthleteResults'
 import { CompareView } from './components/CompareView'
 import { RankingView } from './components/RankingView'
@@ -8,15 +9,21 @@ import { downloadCsv } from './csv'
 
 const CURRENT_YEAR = new Date().getFullYear()
 
-type Tab = 'szukaj' | 'porownanie' | 'ranking'
+type Tab = 'szukaj' | 'karta' | 'porownanie' | 'ranking'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'szukaj', label: 'Wniosek PZSS i starty' },
+  { id: 'karta', label: 'Karta zawodnika' },
   { id: 'porownanie', label: 'Porównanie' },
   { id: 'ranking', label: 'Ranking i statystyki' },
 ]
-const tabFromHash = (): Tab => {
+/** Adres: #porownanie, #ranking, #karta albo #karta/Jan%20Nowak (link do karty konkretnej osoby). */
+const parseHash = (): { tab: Tab; card: string | null } => {
   const h = window.location.hash.slice(1)
-  return h === 'porownanie' || h === 'ranking' ? h : 'szukaj'
+  if (h === 'karta' || h.startsWith('karta/')) {
+    const name = h.startsWith('karta/') ? decodeURIComponent(h.slice(6)) : ''
+    return { tab: 'karta', card: name || null }
+  }
+  return { tab: h === 'porownanie' || h === 'ranking' ? h : 'szukaj', card: null }
 }
 
 interface SearchState {
@@ -31,17 +38,28 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
-  const [tab, setTab] = useState<Tab>(tabFromHash)
+  const [tab, setTab] = useState<Tab>(() => parseHash().tab)
+  const [cardName, setCardName] = useState<string | null>(() => parseHash().card)
 
-  // Zakładka zapisana w adresie (#porownanie) — działa przycisk Wstecz i można wysłać link.
+  // Zakładka (i zawodnik na karcie) zapisane w adresie — działa przycisk Wstecz i można wysłać link.
   useEffect(() => {
-    const onHash = () => setTab(tabFromHash())
+    const onHash = () => {
+      const { tab: t, card } = parseHash()
+      setTab(t)
+      if (t === 'karta') setCardName(card)
+    }
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
   const openTab = (t: Tab) => {
-    window.location.hash = t === 'szukaj' ? '' : t
+    window.location.hash = t === 'szukaj' ? '' : t === 'karta' && cardName ? `karta/${encodeURIComponent(cardName)}` : t
     setTab(t)
+  }
+  const openCard = (name: string) => {
+    setCardName(name)
+    window.location.hash = `karta/${encodeURIComponent(name)}`
+    setTab('karta')
+    window.scrollTo({ top: 0 })
   }
 
   // Kliknięcie zawodnika w rankingu: pierwsza zakładka z jego startami i wnioskiem za ten rok.
@@ -99,6 +117,10 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      <div role="tabpanel" hidden={tab !== 'karta'}>
+        <AthleteCard key={cardName ?? ''} years={years} active={tab === 'karta'} requestedName={cardName} onNameChange={openCard} />
+      </div>
 
       <div role="tabpanel" hidden={tab !== 'ranking'}>
         <RankingView years={years} active={tab === 'ranking'} onOpenAthlete={openAthlete} />
@@ -175,6 +197,7 @@ export default function App() {
                 years={years}
                 defaultYear={defaultYear}
                 licenseOpenInitially={state.names.length === 1}
+                onOpenCard={openCard}
               />
             ))}
           </main>

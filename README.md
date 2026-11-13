@@ -16,7 +16,9 @@ pobierasz CSV, a w panelu „Wniosek PZSS” widzisz werdykt, bilans startów i 
 (z wyborem roku, zakresu licencji, dyscypliny wiodącej i układu „jeden X w wierszu”). Przycisk
 „Pobierz wniosek PDF” daje ten sam plik co wersja konsolowa.
 
-Zakładka „Porównanie” zestawia 2–6 zawodników (pojedynki, starty obok siebie, rekordy). Zakładka
+Zakładka „Karta zawodnika” pokazuje jednego strzelca ze wszystkich lat: wykres formy w konkurencjach,
+rekordy osobiste, sezony z licencją PZSS, rywali i każdy start z miejscem na tle stawki („26. na 92”).
+Link do karty: `#karta/Jan Nowak`. Zakładka „Porównanie” zestawia 2–6 zawodników (pojedynki, starty obok siebie, rekordy). Zakładka
 „Ranking i statystyki” czyta wszystkich zawodników z wybranego roku: najaktywniejsi, podia, kto spełnia
 warunki licencji, najlepsze wyniki i rozkład punktów w konkurencjach, kluby i frekwencja.
 
@@ -44,7 +46,8 @@ dotnet publish src/SzukajkaStartow.Web -c Release -o publish
 cd publish && dotnet SzukajkaStartow.Web.dll --urls http://0.0.0.0:8080
 ```
 
-Wymaga Node.js (do zbudowania frontendu) i .NET 10. Pobrane PDF-y serwer trzyma w tym samym cache co
+Wymaga Node.js (do zbudowania frontendu) i .NET 10. Po starcie serwer wczytuje w tle komunikaty ze wszystkich lat
+(ranking i karta zawodnika potrzebują wszystkich wyników), więc przez pierwszą minutę mogą działać wolniej. Pobrane PDF-y serwer trzyma w tym samym cache co
 wersja konsolowa (zmiana: ustawienie `CacheDir` w `appsettings.json`).
 
 API (JSON):
@@ -55,6 +58,7 @@ API (JSON):
 | `POST /api/search` | `{ "names": [...], "years": [2026] }` → starty |
 | `POST /api/license` | `{ "name", "year", "licensed": [], "leading": null, "oneXPerRow": false }` → plan wniosku i werdykt |
 | `POST /api/license/pdf` | to samo → uzupełniony wniosek PDF |
+| `GET /api/athlete?name=Jan%20Nowak&year=2026` | karta zawodnika (bez `year` = wszystkie lata); przy kilku pasujących osobach lista do wyboru |
 | `GET /api/ranking?year=2026` | ranking i statystyki wszystkich zawodników z roku |
 
 ## Wersja konsolowa

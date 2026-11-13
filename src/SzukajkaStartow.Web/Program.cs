@@ -20,7 +20,12 @@ builder.Services.AddSingleton(sp =>
     return new StartSearch(http, cacheDir);
 });
 
+builder.Services.AddSingleton<YearData>();
+
 var app = builder.Build();
+
+// Po starcie wczytujemy w tle wszystkie lata (ranking i karta zawodnika potrzebują wszystkich wyników).
+app.Lifetime.ApplicationStarted.Register(() => _ = Task.Run(() => app.Services.GetRequiredService<YearData>().WarmUpAsync()));
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -28,22 +33,7 @@ app.UseStaticFiles();
 var api = app.MapGroup("/api");
 
 // Lata, dla których klub ma stronę z komunikatami.
-api.MapGet("/years", async (StartSearch search, IMemoryCache cache, CancellationToken ct) =>
-{
-    var years = await cache.GetOrCreateAsync("years", async entry =>
-    {
-        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(6);
-        var pages = await search.GetYearPagesAsync(StartSearch.YearPage(DateTime.Now.Year), ct);
-        return pages
-            .Select(p => Regex.Match(p, @"komunikaty-(\d{4})"))
-            .Where(m => m.Success)
-            .Select(m => int.Parse(m.Groups[1].Value))
-            .Distinct()
-            .OrderByDescending(y => y)
-            .ToList();
-    });
-    return Results.Ok(years);
-});
+api.MapGet("/years", async (YearData data) => Results.Ok(await data.GetYearsAsync()));
 
 api.MapPost("/search", async (SearchRequest req, StartSearch search, CancellationToken ct) =>
 {
@@ -77,8 +67,7 @@ api.MapPost("/license/pdf", async (LicenseRequest req, StartSearch search, Cance
 });
 
 // Statystyki roku ze wszystkich protokołów, opcjonalnie tylko dla wybranych klubów (?club=...&club=...).
-// Odczytane starty roku i policzone rankingi trzymamy godzinę w pamięci.
-api.MapGet("/ranking", async (int year, [FromQuery(Name = "club")] string[]? club, StartSearch search, IMemoryCache cache,
+api.MapGet("/ranking", async (int year, [FromQuery(Name = "club")] string[]? club, YearData data, IMemoryCache cache,
     CancellationToken ct) =>
 {
     if (Validate(["ranking"], [year]) is { } error) return error;
@@ -87,17 +76,24 @@ api.MapGet("/ranking", async (int year, [FromQuery(Name = "club")] string[]? clu
     if (clubs.Count > 30 || clubs.Any(c => c.Length > 100))
         return Results.BadRequest(new { error = "Nieprawidłowy filtr klubów." });
 
-    var all = await cache.GetOrCreateAsync($"all-{year}", async entry =>
+    var all = await data.GetAllAsync(year, ct);
+    var ranking = cache.GetOrCreate($"ranking-{year}-{all.GetHashCode()}-{string.Join('|', clubs)}", entry =>
     {
         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
-        return (await search.RunAllAsync([StartSearch.YearPage(year)], ct)).Results;
-    });
-    var ranking = await cache.GetOrCreateAsync($"ranking-{year}-{string.Join('|', clubs)}", entry =>
-    {
-        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
-        return Task.FromResult(RankingBuilder.Build(all!, year, clubs));
+        return RankingBuilder.Build(all, year, clubs);
     });
     return Results.Ok(ranking);
+});
+
+// Karta zawodnika z wybranych lat (domyślnie wszystkich). Gdy nazwisko pasuje do kilku osób — lista do wyboru.
+api.MapGet("/athlete", async (string name, [FromQuery(Name = "year")] int[]? year, YearData data, CancellationToken ct) =>
+{
+    var years = year is { Length: > 0 } ? year.Distinct().ToList() : await data.GetYearsAsync();
+    if (Validate([name], years) is { } error) return error;
+    var all = new Dictionary<int, List<StartResult>>();
+    foreach (var y in years)
+        all[y] = await data.GetAllAsync(y, ct);
+    return Results.Ok(AthleteProfileBuilder.Build(all, name.Trim()));
 });
 
 // Wszystkie inne adresy obsługuje aplikacja React.

@@ -37,6 +37,50 @@ export function CompareView({ years }: Props) {
 
   return (
     <div className="compare">
+      <section className="card intro">
+        <p>
+          <strong>Porównaj zawodników</strong> — zestaw obok siebie od 2 do 6 strzelców i sprawdź, kto był lepszy tam, gdzie
+          startowali razem. Program bierze tylko konkurencje rozegrane na tych samych zawodach, więc porównanie jest
+          uczciwe.
+        </p>
+        <ol className="steps">
+          <li>
+            <strong>Wpisz zawodników</strong>
+            <span>po jednym w linii, od 2 do 6 osób</span>
+          </li>
+          <li>
+            <strong>Wybierz lata i kliknij „Porównaj”</strong>
+            <span>im więcej lat, tym więcej wspólnych startów</span>
+          </li>
+          <li>
+            <strong>Przeczytaj wyniki</strong>
+            <span>podsumowanie, pojedynki i starty obok siebie</span>
+          </li>
+        </ol>
+        <details className="how">
+          <summary>Jak to działa?</summary>
+          <ul>
+            <li>
+              <strong>Pojedynek</strong> to jedna konkurencja na jednych zawodach, w której startowali obaj zawodnicy.
+              Wygrywa ten, kto zajął wyższe miejsce, a gdy protokół nie podaje miejsc — kto ma więcej punktów.
+            </li>
+            <li>
+              <strong>Tabela pojedynków</strong>: w wierszu zawodnik, w kolumnie rywal; „7 – 2” znaczy, że zawodnik z wiersza
+              był lepszy 7 razy, a gorszy 2 razy. Zielone tło — prowadzi w bilansie.
+            </li>
+            <li>
+              <strong>Starty obok siebie</strong>: każde zawody i konkurencja w osobnym wierszu, wynik każdego zawodnika
+              w jego kolumnie (miejsce w nawiasie); najlepszy wynik jest wyróżniony.
+            </li>
+            <li>
+              <strong>Najlepsze wyniki w konkurencjach</strong>: rekord każdego zawodnika w danej konkurencji z wybranych lat
+              (porównywane są punkty, bo miejsca z różnych zawodów nie są porównywalne).
+            </li>
+            <li>Każdy zawodnik ma swój kolor we wszystkich tabelach, a obok koloru zawsze jest jego nazwisko.</li>
+          </ul>
+        </details>
+      </section>
+
       <SearchForm
         years={years}
         loading={loading}

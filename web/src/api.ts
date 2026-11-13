@@ -140,6 +140,87 @@ export interface Ranking {
   selectedClubs: string[]
 }
 
+export interface AthleteCandidate {
+  name: string
+  club: string | null
+  starts: number
+}
+
+export interface ProfileStart {
+  year: number
+  date: string | null
+  sortDate: string
+  eventName: string
+  competition: string
+  place: string | null
+  result: string | null
+  score: number | null
+  /** Liczba zawodników w tej konkurencji na tych zawodach. */
+  field: number
+  /** Jaki procent stawki wyprzedził (0–100). */
+  percentile: number | null
+  pdfUrl: string
+  /** Wspólna nazwa konkurencji z różnych lat (do wykresu formy i rekordów). */
+  group: string
+}
+
+export interface PersonalRecord {
+  competition: string
+  best: string
+  bestDate: string | null
+  bestEvent: string
+  count: number
+  average: number
+  last: string | null
+  lastDate: string | null
+}
+
+export interface SeasonStat {
+  year: number
+  starts: number
+  events: number
+  gold: number
+  silver: number
+  bronze: number
+  meetsLicense: boolean
+  licenseScope: string | null
+}
+
+export interface Rival {
+  name: string
+  club: string | null
+  common: number
+  wins: number
+  losses: number
+}
+
+export interface AthleteProfile {
+  name: string
+  club: string | null
+  starts: number
+  events: number
+  gold: number
+  silver: number
+  bronze: number
+  bestPlace: number | null
+  averagePercentile: number | null
+  seasons: SeasonStat[]
+  records: PersonalRecord[]
+  rivals: Rival[]
+  history: ProfileStart[]
+}
+
+export interface AthleteProfileResult {
+  profile: AthleteProfile | null
+  candidates: AthleteCandidate[]
+}
+
+export async function getAthlete(name: string, years: number[], signal?: AbortSignal): Promise<AthleteProfileResult> {
+  const params = new URLSearchParams({ name })
+  for (const y of years) params.append('year', String(y))
+  return (await request(`/api/athlete?${params}`, { signal })).json()
+}
+
 async function request(path: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(path, init)
   if (!res.ok) {

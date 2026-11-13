@@ -181,22 +181,42 @@ public static partial class RankingBuilder
         int.TryParse(place?.TrimEnd('.'), out var p) && p > 0 ? p : null;
 
     /// <summary>Najczęstszy zapis nazwiska, bez przecinka ("KOWALSKI, Jan" → "KOWALSKI Jan").</summary>
-    private static string DisplayName(List<StartResult> list) =>
+    internal static string DisplayName(List<StartResult> list) =>
         MostCommon(list.Select(r => SpacesRegex().Replace(r.Athlete.Replace(",", " "), " ").Trim()))!;
 
-    private static string? MostCommon(IEnumerable<string?> values) =>
+    internal static string? MostCommon(IEnumerable<string?> values) =>
         values.Where(v => !string.IsNullOrWhiteSpace(v))
             .GroupBy(v => v!.Trim())
             .OrderByDescending(g => g.Count())
             .Select(g => g.Key)
             .FirstOrDefault();
 
-    private static string CompetitionKey(string c) => SpacesRegex().Replace(c.ToLowerInvariant(), " ").Trim();
+    internal static string CompetitionKey(string c) => SpacesRegex().Replace(c.ToLowerInvariant(), " ").Trim();
 
-    private static string NormalizeClub(string c) =>
+    /// <summary>
+    /// Wspólna nazwa dla tej samej konkurencji zapisanej różnie w różnych latach
+    /// ("Psp 10", "PSP" → "Pistolet sportowy 10 strzałów"). Inne nazwy zostają bez zmian.
+    /// </summary>
+    internal static string CanonicalCompetition(string c)
+    {
+        var key = CompetitionKey(c);
+        foreach (var (pattern, name) in Canonical)
+            if (Regex.IsMatch(key, pattern)) return name;
+        return SpacesRegex().Replace(c, " ").Trim();
+    }
+
+    private static readonly (string Pattern, string Name)[] Canonical =
+    [
+        (@"^(psp|pistolet sportowy)( 10( strzałów)?)?$", "Pistolet sportowy 10 strzałów"),
+        (@"^(pcz|pistolet centralnego zapłonu)( 10( strzałów)?)?$", "Pistolet centralnego zapłonu 10 strzałów"),
+        (@"^(ksp|karabin sportowy)( 10( strzałów)?)?$", "Karabin sportowy 10 strzałów"),
+        (@"^strzelba( gładkolufowa)?( 5( strzałów)?)?$", "Strzelba 5 strzałów"),
+    ];
+
+    internal static string NormalizeClub(string c) =>
         string.Join(' ', NameMatcher.Tokenize(c));
 
-    private static string ScopeName(Discipline licensed) => string.Join(" + ",
+    internal static string ScopeName(Discipline licensed) => string.Join(" + ",
         LicenseApplication.AllDisciplines.Where(d => licensed.HasFlag(d)).Select(d => d switch
         {
             Discipline.Pistol => "pistolet",
@@ -204,10 +224,10 @@ public static partial class RankingBuilder
             _ => "strzelba",
         }));
 
-    private static string? CleanDate(string? date) => date is null ? null : TrailingRRegex().Replace(date.Trim(), "");
+    internal static string? CleanDate(string? date) => date is null ? null : TrailingRRegex().Replace(date.Trim(), "");
 
     /// <summary>"08-10.05.2026" → "2026-05-08" do sortowania.</summary>
-    private static string SortableDate(string? date)
+    internal static string SortableDate(string? date)
     {
         var m = date is null ? Match.Empty : DateRegex().Match(date);
         return m.Success ? $"{m.Groups[3].Value}-{m.Groups[2].Value.PadLeft(2, '0')}-{m.Groups[1].Value.PadLeft(2, '0')}" : "9999";
