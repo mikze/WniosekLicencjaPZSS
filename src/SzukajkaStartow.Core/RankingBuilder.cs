@@ -26,6 +26,8 @@ public sealed record ClubStat(string Club, int Athletes, int Starts, int Podiums
 
 public sealed record EventStat(string? Date, string Name, string PdfUrl, int Athletes, int Starts);
 
+/// <param name="AvailableClubs">Wszystkie kluby z roku (niezależnie od filtra) — do listy wyboru.</param>
+/// <param name="SelectedClubs">Kluby, według których przefiltrowano statystyki (puste = wszystkie).</param>
 public sealed record Ranking(
     int Year,
     int Events,
@@ -36,7 +38,9 @@ public sealed record Ranking(
     List<AthleteStat> Athletes,
     List<CompetitionStat> Competitions,
     List<ClubStat> Clubs,
-    List<EventStat> EventList);
+    List<EventStat> EventList,
+    List<string> AvailableClubs,
+    List<string> SelectedClubs);
 
 /// <summary>Statystyki roku ze wszystkich protokołów: aktywność, podia, licencje, najlepsze wyniki, kluby, frekwencja.</summary>
 public static partial class RankingBuilder
@@ -46,7 +50,9 @@ public static partial class RankingBuilder
     /// <summary>Ten sam zawodnik zapisany różnie ("KOWALSKI, Jan", "Kowalski Jan") ma ten sam klucz.</summary>
     public static string AthleteKey(string athlete) => string.Join(' ', NameMatcher.Tokenize(athlete).Order());
 
-    public static Ranking Build(IReadOnlyList<StartResult> all, int year)
+    /// <param name="clubs">Filtr klubów; null/puste = wszystkie. Zawodnik należy do klubu, w którym startuje najczęściej,
+    /// i liczą się wszystkie jego starty (także z protokołów bez kolumny klubu, np. Snajper).</param>
+    public static Ranking Build(IReadOnlyList<StartResult> all, int year, IReadOnlyCollection<string>? clubs = null)
     {
         // Liczymy tylko faktyczne starty (z wynikiem albo miejscem), bez DNS/DNF.
         var starts = all
@@ -54,6 +60,19 @@ public static partial class RankingBuilder
             .Select(r => r with { Query = AthleteKey(r.Athlete) })
             .Where(r => r.Query.Length > 0)
             .ToList();
+
+        // Klub zawodnika = najczęstszy klub w jego startach.
+        var primaryClub = starts.GroupBy(r => r.Query)
+            .ToDictionary(g => g.Key, g => MostCommon(g.Select(r => r.Club)));
+        var availableClubs = primaryClub.Values.OfType<string>()
+            .GroupBy(NormalizeClub)
+            .OrderByDescending(g => g.Count())
+            .Select(g => MostCommon(g)!)
+            .ToList();
+
+        var selected = (clubs ?? []).Select(NormalizeClub).Where(c => c.Length > 0).ToHashSet();
+        if (selected.Count > 0)
+            starts = starts.Where(r => primaryClub[r.Query] is { } c && selected.Contains(NormalizeClub(c))).ToList();
 
         var byAthlete = starts.GroupBy(r => r.Query).ToList();
 
@@ -109,11 +128,12 @@ public static partial class RankingBuilder
             .OrderByDescending(c => c.Starters)
             .ToList();
 
-        var clubs = starts
-            .Where(r => !string.IsNullOrWhiteSpace(r.Club))
-            .GroupBy(r => NormalizeClub(r.Club!))
+        // Zawodnik liczy się do swojego głównego klubu (tak samo jak w filtrze), ze wszystkimi startami.
+        var clubStats = starts
+            .Where(r => primaryClub[r.Query] is not null)
+            .GroupBy(r => NormalizeClub(primaryClub[r.Query]!))
             .Select(g => new ClubStat(
-                MostCommon(g.Select(r => r.Club))!,
+                MostCommon(g.Select(r => primaryClub[r.Query]))!,
                 g.Select(r => r.Query).Distinct().Count(),
                 g.Count(),
                 g.Count(r => ParsePlace(r.Place) is >= 1 and <= 3)))
@@ -137,12 +157,14 @@ public static partial class RankingBuilder
             events.Count,
             starts.Count,
             athletes.Count,
-            clubs.Count,
+            clubStats.Count,
             athletes.Count(a => a.MeetsLicense),
             athletes,
             competitions,
-            clubs,
-            events);
+            clubStats,
+            events,
+            availableClubs,
+            availableClubs.Where(c => selected.Contains(NormalizeClub(c))).ToList());
     }
 
     /// <summary>Wynik jako liczba ("93,9" → 93.9, "577-28x" → 577).</summary>

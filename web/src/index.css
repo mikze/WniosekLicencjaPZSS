@@ -980,6 +980,34 @@ th .sort.active {
   }
 }
 
+/* Filtry rankingu */
+
+.ranking .intro {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ranking-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  align-items: flex-start;
+}
+
+.club-filter {
+  flex: 1 1 320px;
+}
+
+.club-filter select {
+  padding: 4px 8px;
+  font-size: 0.9rem;
+}
+
+.stale-block {
+  opacity: 0.5;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
 /* Rozkład punktów (histogram — jedna seria, bez legendy) */
 
 .dist-stats .tile-value.small-value {

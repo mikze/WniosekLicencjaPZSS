@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Caching.Memory;
 using SzukajkaStartow;
@@ -75,15 +76,26 @@ api.MapPost("/license/pdf", async (LicenseRequest req, StartSearch search, Cance
     return Results.File(pdf, "application/pdf", fileName);
 });
 
-// Statystyki roku ze wszystkich protokołów. Liczenie trwa kilka sekund, więc wynik trzymamy godzinę w pamięci.
-api.MapGet("/ranking", async (int year, StartSearch search, IMemoryCache cache, CancellationToken ct) =>
+// Statystyki roku ze wszystkich protokołów, opcjonalnie tylko dla wybranych klubów (?club=...&club=...).
+// Odczytane starty roku i policzone rankingi trzymamy godzinę w pamięci.
+api.MapGet("/ranking", async (int year, [FromQuery(Name = "club")] string[]? club, StartSearch search, IMemoryCache cache,
+    CancellationToken ct) =>
 {
     if (Validate(["ranking"], [year]) is { } error) return error;
-    var ranking = await cache.GetOrCreateAsync($"ranking-{year}", async entry =>
+    var clubs = (club ?? []).Select(c => c.Trim()).Where(c => c.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
+        .Order(StringComparer.OrdinalIgnoreCase).ToList();
+    if (clubs.Count > 30 || clubs.Any(c => c.Length > 100))
+        return Results.BadRequest(new { error = "Nieprawidłowy filtr klubów." });
+
+    var all = await cache.GetOrCreateAsync($"all-{year}", async entry =>
     {
         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
-        var outcome = await search.RunAllAsync([StartSearch.YearPage(year)], ct);
-        return RankingBuilder.Build(outcome.Results, year);
+        return (await search.RunAllAsync([StartSearch.YearPage(year)], ct)).Results;
+    });
+    var ranking = await cache.GetOrCreateAsync($"ranking-{year}-{string.Join('|', clubs)}", entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
+        return Task.FromResult(RankingBuilder.Build(all!, year, clubs));
     });
     return Results.Ok(ranking);
 });

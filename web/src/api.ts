@@ -134,6 +134,10 @@ export interface Ranking {
   competitions: CompetitionStat[]
   clubs: ClubStat[]
   eventList: EventStat[]
+  /** Wszystkie kluby z roku — do listy wyboru filtra. */
+  availableClubs: string[]
+  /** Kluby, według których przefiltrowano statystyki (puste = wszystkie). */
+  selectedClubs: string[]
 }
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
@@ -167,8 +171,10 @@ export async function search(names: string[], years: number[], signal?: AbortSig
   return (await post('/api/search', { names, years }, signal)).json()
 }
 
-export async function getRanking(year: number, signal?: AbortSignal): Promise<Ranking> {
-  return (await request(`/api/ranking?year=${year}`, { signal })).json()
+export async function getRanking(year: number, clubs: string[], signal?: AbortSignal): Promise<Ranking> {
+  const params = new URLSearchParams({ year: String(year) })
+  for (const c of clubs) params.append('club', c)
+  return (await request(`/api/ranking?${params}`, { signal })).json()
 }
 
 export async function getLicensePlan(req: LicenseRequest, signal?: AbortSignal): Promise<LicensePlan> {

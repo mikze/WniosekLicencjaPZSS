@@ -18,21 +18,28 @@ const collator = new Intl.Collator('pl', { sensitivity: 'base' })
 export function RankingView({ years, active, onOpenAthlete }: Props) {
   const [chosenYear, setChosenYear] = useState<number | null>(null)
   const year = chosenYear ?? years[0] ?? null
-  const [result, setResult] = useState<{ year: number; data?: Ranking; error?: string } | null>(null)
+  /** Wybrane kluby; puste = wszystkie. */
+  const [clubs, setClubs] = useState<string[]>([])
+  const key = JSON.stringify({ year, clubs })
+  const [result, setResult] = useState<{ key: string; year: number; data?: Ranking; error?: string } | null>(null)
 
   useEffect(() => {
-    if (!active || year === null) return
+    if (!active) return
+    const { year: y, clubs: c } = JSON.parse(key) as { year: number | null; clubs: string[] }
+    if (y === null) return
     const controller = new AbortController()
-    getRanking(year, controller.signal)
-      .then((data) => setResult({ year, data }))
+    getRanking(y, c, controller.signal)
+      .then((data) => setResult({ key, year: y, data }))
       .catch((e: Error) => {
-        if (e.name !== 'AbortError') setResult({ year, error: e.message })
+        if (e.name !== 'AbortError') setResult((cur) => ({ key, year: y, data: cur?.data, error: e.message }))
       })
     return () => controller.abort()
-  }, [active, year])
+  }, [active, key])
 
-  const loading = year !== null && result?.year !== year
+  const loading = year !== null && result?.key !== key
+  // Przy zmianie filtra pokazujemy poprzednie dane tego samego roku (wyszarzone), zamiast pustej strony.
   const data = result?.year === year ? result.data : undefined
+  const availableClubs = data?.availableClubs ?? []
 
   return (
     <div className="ranking">
@@ -42,26 +49,84 @@ export function RankingView({ years, active, onOpenAthlete }: Props) {
           najaktywniejsi, podia, kto spełnia warunki licencji PZSS, najlepsze wyniki w konkurencjach, kluby, frekwencja
           i rozkład punktów w konkurencjach.
         </p>
-        <label className="field compact year-select">
-          <span className="field-label">Rok</span>
-          <select value={year ?? ''} onChange={(e) => setChosenYear(Number(e.target.value))}>
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="ranking-filters">
+          <label className="field compact year-select">
+            <span className="field-label">Rok</span>
+            <select value={year ?? ''} onChange={(e) => setChosenYear(Number(e.target.value))}>
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+          <ClubFilter available={availableClubs} selected={clubs} onChange={setClubs} />
+        </div>
       </section>
 
-      {loading && (
+      {loading && !data && (
         <p className="muted">
           Liczę ranking {year}… Pierwsze wczytanie roku czyta wszystkie komunikaty i może potrwać kilkanaście sekund.
         </p>
       )}
-      {result?.error && result.year === year && <p className="error">{result.error}</p>}
-      {data && <RankingBody data={data} onOpenAthlete={(name) => onOpenAthlete(name, data.year)} />}
+      {result?.error && result.key === key && <p className="error">{result.error}</p>}
+      {data && (
+        <div className={loading ? 'stale-block' : undefined}>
+          <RankingBody data={data} onOpenAthlete={(name) => onOpenAthlete(name, data.year)} />
+        </div>
+      )}
     </div>
+  )
+}
+
+/** Filtr klubów: domyślnie wszystkie, można dodać jeden lub kilka konkretnych. */
+function ClubFilter({
+  available,
+  selected,
+  onChange,
+}: {
+  available: string[]
+  selected: string[]
+  onChange: (clubs: string[]) => void
+}) {
+  const rest = available.filter((c) => !selected.includes(c))
+  return (
+    <fieldset className="field compact club-filter">
+      <legend className="field-label">Kluby</legend>
+      <div className="chips">
+        {selected.length === 0 && <span className="chip chip-on">Wszystkie kluby</span>}
+        {selected.map((c) => (
+          <button
+            key={c}
+            type="button"
+            className="chip chip-on"
+            onClick={() => onChange(selected.filter((x) => x !== c))}
+            aria-label={`Usuń filtr: ${c}`}
+            title="Usuń z filtra"
+          >
+            {c} ×
+          </button>
+        ))}
+        <select
+          value=""
+          onChange={(e) => e.target.value && onChange([...selected, e.target.value])}
+          aria-label="Dodaj klub do filtra"
+          disabled={rest.length === 0}
+        >
+          <option value="">{selected.length === 0 ? 'Wybierz klub…' : 'Dodaj klub…'}</option>
+          {rest.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        {selected.length > 0 && (
+          <button type="button" className="link-button" onClick={() => onChange([])}>
+            wszystkie
+          </button>
+        )}
+      </div>
+    </fieldset>
   )
 }
 
