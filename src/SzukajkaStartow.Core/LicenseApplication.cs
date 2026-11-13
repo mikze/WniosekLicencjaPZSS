@@ -150,7 +150,7 @@ public static partial class LicenseApplication
                 Name = name!,
                 Date = CleanDate(g.First().Date),
                 Place = g.Select(r => r.DocumentPlace).FirstOrDefault(p => p is not null) ?? defaultPlace,
-                Starts = g.Select(r => new Start(r, Disciplines(r))).Where(s => s.Discipline != Discipline.None).ToList(),
+                Starts = g.SelectMany(ExpandStarts).ToList(),
             });
         }
         rows.RemoveAll(r => r.Starts.Count == 0);
@@ -413,6 +413,24 @@ public static partial class LicenseApplication
     {
         var letters = page.MeasureText(text, size, new PdfPoint(0, 0), font);
         return letters.Count == 0 ? 0 : letters.Max(l => l.BoundingBox.Right) - letters.Min(l => l.BoundingBox.Left);
+    }
+
+    /// <summary>
+    /// Starty z jednego wiersza protokołu. Wielobój (np. Snajper: psp, pcz, ksp, kcz, strzelba) to kilka osobnych
+    /// konkurencji — każda składowa z wynikiem liczy się jako osobny start w swojej dyscyplinie.
+    /// </summary>
+    private static IEnumerable<Start> ExpandStarts(StartResult r)
+    {
+        var parts = r.Details
+            .Where(d => !string.IsNullOrWhiteSpace(d.Value) && d.Key.Length > 0)
+            .Select(d => (d.Key, Discipline: Classify(NameMatcher.Tokenize(d.Key))))
+            .Where(p => p.Discipline is Discipline.Pistol or Discipline.Rifle or Discipline.Shotgun)
+            .ToList();
+        if (parts.Count >= 2)
+            return parts.Select(p => new Start(r with { Competition = $"{r.Competition} – {p.Key}" }, p.Discipline));
+
+        var d = Disciplines(r);
+        return d == Discipline.None ? [] : [new Start(r, d)];
     }
 
     private static Discipline Disciplines(StartResult r)
